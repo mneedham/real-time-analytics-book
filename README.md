@@ -1,1 +1,1 @@
-# real-time-analytics-book
+# Real-Time Analytics Book Code Repository
