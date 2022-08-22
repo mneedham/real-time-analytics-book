@@ -1,3 +1,4 @@
+version: "3"
 services:
   mysql:
     image: mysql/mysql-server:8.0.27
@@ -12,7 +13,7 @@ services:
     volumes:
       - ${PWD}/mysql/mysql.cnf:/etc/mysql/conf.d
       - ${PWD}/mysql/mysql_bootstrap.sql:/docker-entrypoint-initdb.d/mysql_bootstrap.sql
-    healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s, start_period: 60s}
+    healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s}
   zookeeper:
     image: zookeeper:latest
     hostname: zookeeper
@@ -24,7 +25,6 @@ services:
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
   kafka:
     image: confluentinc/cp-kafka:7.1.0
-    platform: linux/amd64
     hostname: kafka
     container_name: kafka
     ports:
@@ -39,10 +39,9 @@ services:
       KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
     depends_on:
       [zookeeper]
-    healthcheck: {test: nc -z localhost 9092, interval: 1s, start_period: 120s}
+    healthcheck: {test: nc -z localhost 9092, interval: 1s}
   pinot-controller:
     image: apachepinot/pinot:0.10.0
-    platform: linux/amd64
     command: "StartController -zkAddress zookeeper:2181"
     container_name: "pinot-controller"
     volumes:
@@ -54,7 +53,6 @@ services:
       - zookeeper
   pinot-broker:
     image: apachepinot/pinot:0.10.0
-    platform: linux/amd64
     command: "StartBroker -zkAddress zookeeper:2181"
     restart: unless-stopped
     container_name: "pinot-broker"
@@ -63,7 +61,6 @@ services:
     depends_on:
       - pinot-controller
   pinot-server:
-    platform: linux/amd64
     image: apachepinot/pinot:0.10.0
     container_name: "pinot-server"
     command: "StartServer -zkAddress zookeeper:2181"
@@ -73,7 +70,6 @@ services:
   simulator:
     build: simulator
     container_name: simulator
-    init: true
     depends_on:
-      mysql: {condition: service_healthy}
-      kafka: {condition: service_healthy}
+      - mysql
+      - kafka
