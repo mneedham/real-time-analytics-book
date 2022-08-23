@@ -40,9 +40,9 @@ services:
     depends_on:
       [zookeeper]
     healthcheck: {test: nc -z localhost 9092, interval: 1s}
-  simulator:
-    build: simulator
-    container_name: simulator
+  orders-service:
+    build: orders-service
+    container_name: orders-service
     depends_on:
       - mysql
       - kafka
