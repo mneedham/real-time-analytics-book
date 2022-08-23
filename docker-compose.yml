@@ -11,9 +11,9 @@ services:
       - MYSQL_USER=mysqluser
       - MYSQL_PASSWORD=mysqlpw
     volumes:
-      - ${PWD}/mysql/mysql.cnf:/etc/mysql/conf.d
-      - ${PWD}/mysql/mysql_bootstrap.sql:/docker-entrypoint-initdb.d/mysql_bootstrap.sql
-      - ${PWD}/mysql/data:/var/lib/mysql-files/data
+      - ./mysql/mysql.cnf:/etc/mysql/conf.d
+      - ./mysql/mysql_bootstrap.sql:/docker-entrypoint-initdb.d/mysql_bootstrap.sql
+      - ./mysql/data:/var/lib/mysql-files/data
     healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s}
   zookeeper:
     image: zookeeper:latest
@@ -44,6 +44,7 @@ services:
     healthcheck: {test: nc -z localhost 9092, interval: 1s}
   orders-service:
     build: orders-service
+    restart: unless-stopped
     container_name: orders-service
     depends_on:
       - mysql
