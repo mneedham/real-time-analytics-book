@@ -76,3 +76,11 @@ services:
     restart: unless-stopped
     depends_on:
       - pinot-broker
+  dashboard:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - pinot-broker

@@ -7,7 +7,7 @@ import time
 import plotly.express as px
 import plotly.graph_objects as go
 
-conn = connect("localhost", 8099)
+conn = connect("pinot-broker", 8099)
 
 st.set_page_config(layout="wide")
 st.title("Pizza App Dashboard 🍕")
