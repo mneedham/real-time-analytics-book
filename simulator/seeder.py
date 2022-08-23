@@ -8,14 +8,8 @@ import datetime
 import uuid
 
 # CONFIG
-usersLimit              = 1000
-productsLimit           = 100
-ordersLimit             = 100000
-orderInterval           = 100
-itemPriceMin            = 5
-itemPriceMax            = 500
-categories              = ['electronics', 'groceries', 'health', 'household', 'automotive']
-
+usersLimit         = 1000
+orderInterval      = 100
 mysqlHost          = 'mysql'
 mysqlPort          = '3306'
 mysqlUser          = 'mysqluser'
@@ -24,13 +18,8 @@ debeziumHostPort   = 'debezium:8083'
 kafkaHostPort      = 'kafka:9092'
 
 # INSERT TEMPLATES
-insert_user_tpl        = "INSERT INTO fakeshop.users (first_name, last_name, email, country) VALUES ( %s, %s, %s, %s )"
-insert_product_tpl     = "INSERT INTO fakeshop.products (name, category, price) VALUES ( %s, %s, %s )"
-insert_order_tpl       = "INSERT INTO fakeshop.orders (user_id, product_id, quantity, total) VALUES ( %s, %s, %s, %s )"
-
 insert_pizzashop_user_tpl    = "INSERT INTO pizzashop.users (first_name, last_name, email, country) VALUES ( %s, %s, %s, %s )"
 insert_pizza_product_tpl     = "INSERT INTO pizzashop.products (name, category, price) VALUES ( %s, %s, %s )"
-insert_pizza_order_tpl       = "INSERT INTO pizzashop.orders (user_id, product_id, quantity, total) VALUES ( %s, %s, %s, %s )"
 
 fake = Faker()
 fake.add_provider(company)
@@ -51,6 +40,9 @@ try:
     ) as connection:
         with connection.cursor() as cursor:
             print("Seeding pizzashop database...")
+            cursor.execute("TRUNCATE TABLE pizzashop.users")
+            cursor.execute("TRUNCATE TABLE pizzashop.products")
+
             cursor.executemany(
                 insert_pizzashop_user_tpl,
                 [
