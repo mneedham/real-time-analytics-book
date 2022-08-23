@@ -13,10 +13,12 @@ services:
     volumes:
       - ${PWD}/mysql/mysql.cnf:/etc/mysql/conf.d
       - ${PWD}/mysql/mysql_bootstrap.sql:/docker-entrypoint-initdb.d/mysql_bootstrap.sql
+      - ${PWD}/mysql/data:/var/lib/mysql-files/data
     healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s}
   zookeeper:
     image: zookeeper:latest
     hostname: zookeeper
+    container_name: zookeeper
     ports:
       - "2181:2181"
     environment:

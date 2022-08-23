@@ -53,6 +53,6 @@ with open("mysql/data/products.csv", "w") as products_file:
                         "prices": prices
                     }
 
-                writer.writerow([item["name"], item["description"], item["price"], item["category"], item["image"]])
+                writer.writerow([item["name"], item["description"], float(item["price"]), item["category"], item["image"]])
 
                 print(json.dumps(item))

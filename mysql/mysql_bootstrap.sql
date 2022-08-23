@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS pizzashop;
 USE pizzashop;
 
 GRANT ALL PRIVILEGES ON pizzashop.* TO 'mysqluser';
+GRANT FILE on *.* to 'mysqluser';
 
 FLUSH PRIVILEGES;
 
@@ -20,8 +21,22 @@ CREATE TABLE IF NOT EXISTS pizzashop.products
 (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100),
+    description VARCHAR(500),
     category VARCHAR(100),
     price FLOAT,
+    image VARCHAR(200),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+LOAD DATA INFILE '/var/lib/mysql-files/data/products.csv' 
+INTO TABLE pizzashop.products 
+FIELDS TERMINATED BY ','
+OPTIONALLY ENCLOSED BY '"'
+(name,description,price,category,image);
+
+LOAD DATA INFILE '/var/lib/mysql-files/data/users.csv' 
+INTO TABLE pizzashop.users 
+FIELDS TERMINATED BY ','
+OPTIONALLY ENCLOSED BY '"'
+(first_name,last_name,email,country);
