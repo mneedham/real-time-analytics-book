@@ -17,16 +17,6 @@ mysqlPass          = 'mysqlpw'
 debeziumHostPort   = 'debezium:8083'
 kafkaHostPort      = 'kafka:9092'
 
-# INSERT TEMPLATES
-insert_pizzashop_user_tpl    = "INSERT INTO pizzashop.users (first_name, last_name, email, country) VALUES ( %s, %s, %s, %s )"
-insert_pizza_product_tpl     = "INSERT INTO pizzashop.products (name, category, price) VALUES ( %s, %s, %s )"
-
-fake = Faker()
-fake.add_provider(company)
-
-with open("data/products.json", "r") as products_file:
-    products = [json.loads(row) for row in products_file.readlines()]
-
 producer = KafkaProducer(bootstrap_servers=kafkaHostPort, api_version=(7, 1, 0), 
   value_serializer=lambda m: json.dumps(m).encode('utf-8'))
 
@@ -39,33 +29,6 @@ try:
         password=mysqlPass,
     ) as connection:
         with connection.cursor() as cursor:
-            print("Seeding pizzashop database...")
-            cursor.execute("TRUNCATE TABLE pizzashop.users")
-            cursor.execute("TRUNCATE TABLE pizzashop.products")
-
-            cursor.executemany(
-                insert_pizzashop_user_tpl,
-                [
-                    (
-                        fake.first_name(),
-                        fake.last_name(),
-                        fake.email(),
-                        fake.country()
-                     ) for i in range(usersLimit)
-                ]
-            )
-            cursor.executemany(
-                insert_pizza_product_tpl,
-                [
-                    (
-                        product["name"],
-                        product["category"],
-                        product["price"]
-                    ) for product in products
-                ]
-            )
-            connection.commit()
-
             print("Getting product ID and PRICE as tuples...")
             cursor.execute("SELECT id, price FROM pizzashop.products")
             product_prices = [(row[0], row[1]) for row in cursor]
