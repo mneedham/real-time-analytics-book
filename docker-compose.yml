@@ -15,6 +15,7 @@ services:
     healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s, start_period: 60s}
   zookeeper:
     image: zookeeper:latest
+    container_name: zookeeper
     hostname: zookeeper
     ports:
       - "2181:2181"
