@@ -83,7 +83,7 @@ services:
     command: "AddTable -schemaFile /config/schema.json -tableConfigFile /config/table.json -controllerHost pinot-controller -exec"
     restart: on-failure
     environment:
-    - "pinot.admin.system.exit=true"
+    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
     depends_on:
       - pinot-controller
   dashboard:
