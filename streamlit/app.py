@@ -37,9 +37,7 @@ query = """
 select count(*) FILTER(WHERE  ts > ago('PT1M')) AS events1Min,
        count(*) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS events1Min2Min,
        sum(total) FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
-       sum(total) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min,
-       sum(total) / count(*) FILTER(WHERE  ts > ago('PT1M'))  AS averageOrderValue1Min,
-	   sum(total) / count(*) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M'))  AS averageOrderValue1Min2Min
+       sum(total) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
 from orders 
 where ts > ago('PT2M')
 limit 1
@@ -66,12 +64,14 @@ metric2.metric(
     delta="{:,.2f}".format(df['total1Min'].values[0] - df['total1Min2Min'].values[0])
 )
 
+average_order_value_1min = df['total1Min'].values[0] / int(df['events1Min'].values[0])
+average_order_value_1min_2min = df['total1Min2Min'].values[0] / int(df['events1Min2Min'].values[0])
+
 metric3.metric(
     label="Average order value in ₹",
-    value="{:,.2f}".format(df['averageOrderValue1Min'].values[0]),
-    delta="{:,.2f}".format(df['averageOrderValue1Min'].values[0] - df['total1Min2Min'].values[0])
+    value="{:,.2f}".format(average_order_value_1min),
+    delta="{:,.2f}".format(average_order_value_1min - average_order_value_1min_2min)
 )
-
 
 query = """
 select ToDateTime(DATETRUNC('minute', ts), 'yyyy-MM-dd hh:mm:ss') AS dateMin, 

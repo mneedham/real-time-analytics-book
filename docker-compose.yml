@@ -53,13 +53,12 @@ services:
     image: apachepinot/pinot:0.10.0
     command: "StartController -zkAddress zookeeper:2181"
     container_name: "pinot-controller"
-    volumes:
-      - ./pinot/config:/config
     restart: unless-stopped
     ports:
       - "9000:9000"
     depends_on:
       - zookeeper
+    healthcheck: {test: nc -z localhost 9000, interval: 1s}
   pinot-broker:
     image: apachepinot/pinot:0.10.0
     command: "StartBroker -zkAddress zookeeper:2181"
@@ -76,6 +75,17 @@ services:
     restart: unless-stopped
     depends_on:
       - pinot-broker
+  pinot-add-table:
+    image: apachepinot/pinot:0.10.0
+    container_name: "pinot-add-table"
+    volumes:
+      - ./pinot/config:/config
+    command: "AddTable -schemaFile /config/schema.json -tableConfigFile /config/table.json -controllerHost pinot-controller -exec"
+    restart: on-failure
+    environment:
+    - "pinot.admin.system.exit=true"
+    depends_on:
+      - pinot-controller
   dashboard:
     build: streamlit
     restart: unless-stopped
