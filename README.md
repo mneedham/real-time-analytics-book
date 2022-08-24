@@ -10,14 +10,11 @@ The code for Dunith Dhanushka and Mark Needham's upcoming book on Real-Time Anal
 docker-compose up
 ```
 
-## Configure Pinot
+Once that's run, you can navigate to the following:
 
-```bash
-docker exec -it pinot-controller bin/pinot-admin.sh AddTable \
-  -tableConfigFile /config/table.json \
-  -schemaFile /config/schema.json \
-  -exec
-```
+* Pinot UI - http://localhost:9000
+* Streamlit Dashboard - http://localhost:8501
+
 
 ## (Optional) Downloading products
 
