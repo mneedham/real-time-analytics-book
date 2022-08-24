@@ -37,10 +37,12 @@ LOAD DATA INFILE '/var/lib/mysql-files/data/products.csv'
 INTO TABLE pizzashop.products 
 FIELDS TERMINATED BY ','
 OPTIONALLY ENCLOSED BY '"'
+IGNORE 1 LINES
 (name,description,price,category,image);
 
 LOAD DATA INFILE '/var/lib/mysql-files/data/users.csv' 
 INTO TABLE pizzashop.users 
 FIELDS TERMINATED BY ','
 OPTIONALLY ENCLOSED BY '"'
+IGNORE 1 LINES
 (first_name,last_name,email,country);
