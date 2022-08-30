@@ -1,2 +1,3 @@
 streamlit==1.12.0
 plotly==5.10.0
+pinotdb==0.4.5
