@@ -81,7 +81,7 @@ services:
     container_name: "pinot-add-table"
     volumes:
       - ./pinot/config:/config
-    command: "AddTable -schemaFile /config/schema.json -tableConfigFile /config/table.json -controllerHost pinot-controller -exec"
+    command: "AddTable -schemaFile /config/orders/schema.json -tableConfigFile /config/orders/table.json -controllerHost pinot-controller -exec"
     restart: on-failure
     environment:
     - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
