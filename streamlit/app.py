@@ -9,7 +9,7 @@ import plotly.express as px
 conn = connect("localhost", 8099)
 
 st.set_page_config(layout="wide")
-st.title("Pizza App Dashboard 🍕")
+st.title("All About That Dough Dashboard 🍕")
 
 now = datetime.now()
 dt_string = now.strftime("%d %B %Y %H:%M:%S")
