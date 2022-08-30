@@ -1,0 +1,80 @@
+version: "3"
+services:
+  mysql:
+    image: mysql/mysql-server:8.0.27
+    hostname: mysql
+    container_name: mysql
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=debezium
+      - MYSQL_USER=mysqluser
+      - MYSQL_PASSWORD=mysqlpw
+    volumes:
+      - ./mysql/mysql.cnf:/etc/mysql/conf.d
+      - ./mysql/mysql_bootstrap.sql:/docker-entrypoint-initdb.d/mysql_bootstrap.sql
+      - ./mysql/data:/var/lib/mysql-files/data
+    healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s}
+  zookeeper:
+    image: zookeeper:latest
+    container_name: zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181  
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+  kafka:
+    image: confluentinc/cp-kafka:7.1.0
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
+    depends_on:
+      [zookeeper]
+    healthcheck: {test: nc -z localhost 9092, interval: 1s}
+  orders-service:
+    build: orders-service
+    restart: unless-stopped
+    container_name: orders-service
+    depends_on:
+      - mysql
+      - kafka
+  pinot-controller:
+    image: apachepinot/pinot:0.10.0
+    command: "QuickStart -type EMPTY"
+    container_name: "pinot-controller"
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "8000:8000"
+    depends_on:
+      - zookeeper
+  pinot-add-table:
+    image: apachepinot/pinot:0.10.0
+    container_name: "pinot-add-table"
+    volumes:
+      - ./pinot/config:/config
+    command: "AddTable -schemaFile /config/schema.json -tableConfigFile /config/table.json -controllerHost pinot-controller -exec"
+    restart: on-failure
+    environment:
+    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
+    depends_on:
+      - pinot-controller
+  dashboard:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - pinot-controller

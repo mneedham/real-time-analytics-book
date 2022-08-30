@@ -29,6 +29,23 @@ try:
         password=mysqlPass,
     ) as connection:
         with connection.cursor() as cursor:
+            print("Getting products for the products topic")
+            cursor.execute("SELECT id, name, description, category, price, image FROM pizzashop.products")
+            products = [{
+                "id": row[0],
+                "name": row[1],
+                "description": row[2],
+                "category": row[3],
+                "price": row[4],
+                "image": row[5]
+                }
+                for row in cursor
+            ]
+
+            for product in products:
+                producer.send('products', product, bytes(product["id"]))
+            producer.flush()
+
             print("Getting product ID and PRICE as tuples...")
             cursor.execute("SELECT id, price FROM pizzashop.products")
             product_prices = [(row[0], row[1]) for row in cursor]
@@ -50,7 +67,7 @@ try:
                     "status": "PLACED_ORDER"
                 }
 
-                producer.send('orders', event)
+                producer.send('orders', event, bytes(event["productId"]))
 
                 events_processed += 1
                 if events_processed % 100 == 0:

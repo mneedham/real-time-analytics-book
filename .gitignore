@@ -1,2 +1,4 @@
 venv
 raw_data
+.DS_Store
+kafka-streams/target
