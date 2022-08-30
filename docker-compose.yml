@@ -95,3 +95,11 @@ services:
       - "8501:8501"
     depends_on:
       - pinot-broker
+  kafka-streams:
+    build: kafka-streams
+    restart: unless-stopped
+    container_name: kafka-streams
+    environment:
+      - BOOTSTRAP_SERVER=kafka:9092
+    depends_on:
+      - kafka
