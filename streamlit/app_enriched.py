@@ -7,6 +7,7 @@ import time
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+from dateutil import parser
 
 def path_to_image_html(path):
     return '<img src="' + path + '" width="60" >'
@@ -14,7 +15,7 @@ def path_to_image_html(path):
 @st.cache
 def convert_df(input_df):
      # IMPORTANT: Cache the conversion to prevent computation on every rerun
-     return input_df.to_html(escape=False, formatters=dict(image    =path_to_image_html))
+     return input_df.to_html(escape=False, formatters=dict(image=path_to_image_html))
 
 pinot_host=os.environ.get("PINOT_SERVER", "pinot-broker")
 pinot_port=os.environ.get("PINOT_PORT", 8099)
@@ -142,8 +143,83 @@ if pinot_available:
             fig.update_yaxes(range=[0, df_ts["revenue"].max() * 1.1])
             st.plotly_chart(fig, use_container_width=True) 
 
+    # CSS to inject contained in a string
+    hide_table_row_index = """
+    <style>
+    thead tr th:first-child {display:none}
+    tbody th {display:none}
+    tbody tr th:first-child {display:none}
+    div.stMarkdown table.dataframe { 
+        width: 100%;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    div.stMarkdown table.dataframe thead tr {
+        text-align: center !important; 
+    }
+
+    div.stMarkdown table.dataframe, div.stMarkdown table.dataframe tbody tr td, div.stMarkdown table.dataframe thead tr th {
+        border:none
+    }
+
+    div.stMarkdown table.dataframe tbody tr, div.stMarkdown table.dataframe thead tr {
+        height: 75px;
+    }
+
+    div.stMarkdown table.dataframe tbody tr:nth-child(even) {
+        background: #efefef
+    }             
+    </style>
+    """
+
+    # Inject CSS with Markdown
+    st.markdown(hide_table_row_index, unsafe_allow_html=True)
+
+    left, right = st.columns(2)
+
+    with left:
+        st.subheader("Most popular items")
+
+        curs.execute("""
+        SELECT "product.name" AS product, 
+            "product.image" AS image,
+                count(*) AS orders, 
+                sum("order.quantity") AS quantity
+        FROM orders_enriched
+        where ts > ago('PT1H')
+        group by product, image
+        ORDER BY count(*) DESC
+        LIMIT 10
+        """)
+
+        df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
+        df["quantityPerOrder"] = df["quantity"] / df["orders"]
+
+        html = convert_df(df)
+        st.markdown(html, unsafe_allow_html=True)
+
+    with right:
+        st.subheader("Most popular categories")
+
+        curs.execute("""
+        SELECT "product.category" AS category, 
+                count(*) AS orders, 
+                sum("order.quantity") AS quantity
+        FROM orders_enriched
+        where ts > ago('PT1H')
+        group by category
+        ORDER BY count(*) DESC
+        LIMIT 10
+        """)
+
+        df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
+        df["quantityPerOrder"] = df["quantity"] / df["orders"]
+
+        html = convert_df(df)
+        st.markdown(html, unsafe_allow_html=True)
+
     curs.execute("""
-    SELECT ts, 
+    SELECT ToDateTime(ts, 'HH:mm:ss:SSS') AS tsms, 
            "product.name" AS product, 
             "product.image" AS image,
             "product.category" AS category,
@@ -157,39 +233,8 @@ if pinot_available:
     """)
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
-
+    
     st.subheader("Latest Orders")
-
-    # CSS to inject contained in a string
-    hide_table_row_index = """
-                <style>
-                thead tr th:first-child {display:none}
-                tbody th {display:none}
-                tbody tr th:first-child {display:none}
-                div.stMarkdown table.dataframe { 
-                    width: 100%;
-                    text-align: center;
-                }
-                div.stMarkdown table.dataframe thead tr {
-                    text-align: center !important; 
-                }
-
-                div.stMarkdown table.dataframe, div.stMarkdown table.dataframe tbody tr td, div.stMarkdown table.dataframe thead tr th {
-                    border:none
-                }
-
-                div.stMarkdown table.dataframe tbody tr, div.stMarkdown table.dataframe thead tr {
-                    height: 65px;
-                }
-
-                 div.stMarkdown table.dataframe tbody tr:nth-child(even) {
-                    background: #efefef
-                }             
-                </style>
-                """
-
-    # Inject CSS with Markdown
-    st.markdown(hide_table_row_index, unsafe_allow_html=True)
 
     html = convert_df(df)
 
