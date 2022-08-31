@@ -11,6 +11,6 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --upgrade pip
 
-COPY . .
+COPY app.py .
 
 ENTRYPOINT ["streamlit", "run", "app.py"]

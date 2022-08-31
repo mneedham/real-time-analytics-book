@@ -81,8 +81,10 @@ services:
     container_name: "pinot-add-table"
     volumes:
       - ./pinot/config:/config
-    command: "AddTable -schemaFile /config/orders/schema.json -tableConfigFile /config/orders/table.json -controllerHost pinot-controller -exec"
+    command: "'./bin/pinot-admin.sh AddTable -schemaFile /config/orders/schema.json -tableConfigFile /config/orders/table.json -controllerHost pinot-controller -exec && \
+               ./bin/pinot-admin.sh AddTable -schemaFile /config/orders_enriched/schema.json -tableConfigFile /config/orders_enriched/table.json -controllerHost pinot-controller -exec'"
     restart: on-failure
+    entrypoint: "bash -c"
     environment:
     - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
     depends_on:
@@ -95,6 +97,18 @@ services:
       - "8501:8501"
     depends_on:
       - pinot-broker
+    volumes:
+      - ./streamlit/app.py:/workdir/app.py
+  dashboard-enriched:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard
+    ports:
+      - "8502:8501"
+    depends_on:
+      - pinot-controller
+    volumes:
+      - ./streamlit/app_enriched.py:/workdir/app.py
   kafka-streams:
     build: kafka-streams
     restart: unless-stopped

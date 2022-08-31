@@ -5,8 +5,16 @@ from pinotdb import connect
 from datetime import datetime
 import time
 import plotly.express as px
-import plotly.graph_objects as go 
+import plotly.graph_objects as go
 import os
+
+def path_to_image_html(path):
+    return '<img src="' + path + '" width="60" >'
+
+@st.cache
+def convert_df(input_df):
+     # IMPORTANT: Cache the conversion to prevent computation on every rerun
+     return input_df.to_html(escape=False, formatters=dict(image    =path_to_image_html))
 
 pinot_host=os.environ.get("PINOT_SERVER", "pinot-broker")
 pinot_port=os.environ.get("PINOT_PORT", 8099)
@@ -37,22 +45,18 @@ curs = conn.cursor()
 
 pinot_available = False
 try:
-    curs.execute("select * FROM orders where ts > ago('PT2M')")
-
-    if not curs.description:
-        st.warning("Connected to Pinot, but no orders imported",icon="⚠️")    
-
-    pinot_available = curs.description is not None
+    curs.execute("select * FROM orders")
+    pinot_available = True
 except Exception as e:
-    st.warning("Unable to connect to Apache Pinot",icon="⚠️")
+    st.warning(f"Unable to connect to Apache Pinot [{pinot_host}:{pinot_port}]",icon="⚠️")
 
 if pinot_available:
     query = """
     select count(*) FILTER(WHERE  ts > ago('PT1M')) AS events1Min,
         count(*) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS events1Min2Min,
-        sum(total) FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
-        sum(total) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
-    from orders 
+        sum("order.total") FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
+        sum("order.total") FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
+    from orders_enriched
     where ts > ago('PT2M')
     limit 1
     """
@@ -90,8 +94,8 @@ if pinot_available:
     query = """
     select ToDateTime(DATETRUNC('minute', ts), 'yyyy-MM-dd hh:mm:ss') AS dateMin, 
         count(*) AS orders, 
-        sum(total) AS revenue
-    from orders 
+        sum("order.total") AS revenue
+    from orders_enriched
     where ts > ago('PT1H')
     group by dateMin
     order by dateMin desc
@@ -139,8 +143,15 @@ if pinot_available:
             st.plotly_chart(fig, use_container_width=True) 
 
     curs.execute("""
-    SELECT ts, productId, quantity, status, total, userId
-    FROM orders
+    SELECT ts, 
+           "product.name" AS product, 
+            "product.image" AS image,
+            "product.category" AS category,
+           "order.quantity" as quantity, 
+           "order.status" As status, 
+           "order.total" AS total, 
+           "order.userId" AS userId
+    FROM orders_enriched
     ORDER BY ts DESC
     LIMIT 10
     """)
@@ -154,14 +165,38 @@ if pinot_available:
                 <style>
                 thead tr th:first-child {display:none}
                 tbody th {display:none}
+                tbody tr th:first-child {display:none}
+                div.stMarkdown table.dataframe { 
+                    width: 100%;
+                    text-align: center;
+                }
+                div.stMarkdown table.dataframe thead tr {
+                    text-align: center !important; 
+                }
+
+                div.stMarkdown table.dataframe, div.stMarkdown table.dataframe tbody tr td, div.stMarkdown table.dataframe thead tr th {
+                    border:none
+                }
+
+                div.stMarkdown table.dataframe tbody tr, div.stMarkdown table.dataframe thead tr {
+                    height: 65px;
+                }
+
+                 div.stMarkdown table.dataframe tbody tr:nth-child(even) {
+                    background: #efefef
+                }             
                 </style>
                 """
 
     # Inject CSS with Markdown
     st.markdown(hide_table_row_index, unsafe_allow_html=True)
 
+    html = convert_df(df)
 
-    st.dataframe(df)
+    st.markdown(
+        html,
+        unsafe_allow_html=True
+    )
 
     curs.close()
 

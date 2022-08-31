@@ -16,6 +16,17 @@ Once that's run, you can navigate to the following:
 * Streamlit Dashboard - http://localhost:8501
 
 
+## Add enriched table
+
+```
+docker run -v $PWD/pinot/config:/config \
+  --network real-time-analytics-book_default \
+  apachepinot/pinot:0.10.0 \
+  AddTable -schemaFile /config/orders_enriched/schema.json \
+           -tableConfigFile /config/orders_enriched/table.json \
+           -controllerHost pinot-controller -exec
+```
+
 ## (Optional) Downloading products
 
 Setup Python environment:

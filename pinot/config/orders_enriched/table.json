@@ -1,12 +1,12 @@
 {
-    "tableName": "orders",
+    "tableName": "orders_enriched",
     "tableType": "REALTIME",
     "segmentsConfig": {
         "timeColumnName": "ts",
         "timeType": "MILLISECONDS",
         "retentionTimeUnit": "DAYS",
         "retentionTimeValue": "1",
-        "schemaName": "orders",
+        "schemaName": "orders_enriched",
         "replicasPerPartition": "1"
     },
     "tenants": {},
@@ -15,7 +15,7 @@
         "streamConfigs": {
             "streamType": "kafka",
             "stream.kafka.consumer.type": "lowLevel",
-            "stream.kafka.topic.name": "orders",
+            "stream.kafka.topic.name": "enriched-orders",
             "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
             "stream.kafka.consumer.factory.class.name": "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory", 
             "stream.kafka.broker.list": "kafka:9092",
@@ -29,7 +29,7 @@
         "transformConfigs": [
             {
                 "columnName": "ts",
-                "transformFunction": "FromDateTime(createdAt, 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS')"
+                "transformFunction": "FromDateTime(\"order.createdAt\", 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS')"
             }
         ]
     },
