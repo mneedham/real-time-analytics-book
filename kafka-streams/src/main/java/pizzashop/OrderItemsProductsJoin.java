@@ -11,7 +11,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
 import pizzashop.deser.JsonDeserializer;
 import pizzashop.deser.JsonSerializer;
-import pizzashop.deser.OrderItemSerde;
 import pizzashop.deser.OrderItemWithOrderIdSerde;
 import pizzashop.models.*;
 
@@ -29,7 +28,7 @@ public class OrderItemsProductsJoin {
         final Serde<OrderItem> orderItemSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(OrderItem.class));
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "pizzashop-orderitems9");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "pizzashop-orderitems21" + System.currentTimeMillis());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
                 System.getenv().getOrDefault("BOOTSTRAP_SERVER", "localhost:29092"));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Bytes().getClass());
@@ -61,7 +60,6 @@ public class OrderItemsProductsJoin {
             }
             return result;
         });
-        // .groupByKey(Grouped.with("orderItems", Serdes.Bytes(), orderItemSerde))
 
         final Serde<Product> productSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(Product.class));
@@ -83,12 +81,47 @@ public class OrderItemsProductsJoin {
             return hydratedOrderItem;
         });
 
-        final Serde<HydratedOrderItem> updatedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+        final Serde<HydratedOrderItem> hydratedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(HydratedOrderItem.class));
 
-        enrichedOrderItems.to("enriched-order-items2", Produced.with(Serdes.Bytes(), updatedOrderItemsSerde));
+//        enrichedOrderItems.to("enriched-order-items5", Produced.with(Serdes.Bytes(), hydratedOrderItemsSerde));
 
-//        enrichedOrderItems.groupBy((key, value) -> value.orderItem.)
+        final Serde<HydratedOrder> hydratedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+                new JsonDeserializer<>(HydratedOrder.class));
+
+        KTable<Bytes, HydratedOrder> hydratedOrders = enrichedOrderItems
+                .groupBy((key, value) -> new Bytes(value.orderId.getBytes()),
+                        Grouped.with(Serdes.Bytes(), hydratedOrderItemsSerde))
+                .aggregate(HydratedOrder::new, (key, value, aggregate) -> {
+                    aggregate.addOrderItem(value);
+                    return aggregate;
+                }, Materialized.with(Serdes.Bytes(), hydratedOrdersSerde));
+
+        orders.peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
+
+        KStream<Bytes, Order> rekeyedOrders = orders.selectKey((key, value) -> new Bytes(value.id.getBytes()));
+
+        hydratedOrders.toStream().peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
+//
+//        hydratedOrders.toStream().to("rogue-orders6", Produced.with(Serdes.Bytes(), hydratedOrdersSerde));
+
+        final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+                new JsonDeserializer<>(CompleteOrder.class));
+
+        rekeyedOrders.leftJoin(hydratedOrders, (value1, value2) -> {
+            CompleteOrder completeOrder = new CompleteOrder();
+            completeOrder.id = value1.id;
+            completeOrder.status = value1.status;
+            completeOrder.userId = value1.userId;
+            completeOrder.createdAt = value1.createdAt;
+
+            if(value2 != null) {
+                completeOrder.orderItems = value2.orderItems;
+            }
+            return completeOrder;
+        })
+                .peek((key, value) -> System.out.println("key = " + key + ", value = " + value))
+                .to("enriched-orders6", Produced.with(Serdes.Bytes(), completeOrderSerde));
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), props);
         final CountDownLatch latch = new CountDownLatch(1);
