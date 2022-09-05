@@ -14,7 +14,6 @@ def path_to_image_html(path):
 
 @st.cache
 def convert_df(input_df):
-     # IMPORTANT: Cache the conversion to prevent computation on every rerun
      return input_df.to_html(escape=False, formatters=dict(image=path_to_image_html))
 
 pinot_host=os.environ.get("PINOT_SERVER", "pinot-broker")
@@ -36,17 +35,39 @@ if not "sleep_time" in st.session_state:
 if not "auto_refresh" in st.session_state:
     st.session_state.auto_refresh = True
 
-auto_refresh = st.checkbox('Auto Refresh?', st.session_state.auto_refresh)
+mapping = {
+    "1 hour": "PT1H",
+    "10 minutes": "PT10M",
+    "5 minutes": "PT5M"
+}
 
-if auto_refresh:
-    number = st.number_input('Refresh rate in seconds', value=st.session_state.sleep_time)
-    st.session_state.sleep_time = number
+mapping2 = {
+    "1 hour": {"period": "PT60M", "granularity": "minute"},
+    "30 minutes": {"period": "PT30M", "granularity": "minute"},
+    "10 minutes": {"period": "PT10M", "granularity": "second"},
+    "5 minutes": {"period": "PT5M", "granularity": "second"}
+}
+
+with st.expander("Configure Dashboard", expanded=True):
+    left, right = st.columns(2)
+
+    with left:
+        auto_refresh = st.checkbox('Auto Refresh?', st.session_state.auto_refresh)
+
+        if auto_refresh:
+            number = st.number_input('Refresh rate in seconds', value=st.session_state.sleep_time)
+            st.session_state.sleep_time = number
+
+    with right:
+            time_ago = st.radio("Time period to cover", mapping2.keys(), horizontal=True, key="time_ago")
 
 curs = conn.cursor()
 
 pinot_available = False
 try:
-    curs.execute("select * FROM orders")
+    curs.execute("select * FROM orders where ts > ago('PT2M')")
+    if not curs.description:
+        st.warning("Connected to Pinot, but no orders imported",icon="⚠️")
     pinot_available = True
 except Exception as e:
     st.warning(f"Unable to connect to Apache Pinot [{pinot_host}:{pinot_port}]",icon="⚠️")
@@ -58,14 +79,15 @@ if pinot_available:
         sum("order.total") FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
         sum("order.total") FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
     from orders_enriched
-    where ts > ago('PT2M')
+    where ts > ago(%(timeAgo)s)
     limit 1
     """
-    curs.execute(query)
+    
+    curs.execute(query, {"timeAgo": mapping2[time_ago]["period"]})
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
 
-    st.subheader("Orders in the last minute")
+    st.subheader(f"Orders in the last {time_ago}")
 
     metric1, metric2, metric3 = st.columns(3)
 
@@ -93,17 +115,17 @@ if pinot_available:
     )
 
     query = """
-    select ToDateTime(DATETRUNC('minute', ts), 'yyyy-MM-dd hh:mm:ss') AS dateMin, 
+    select ToDateTime(DATETRUNC(%(granularity)s, ts), 'yyyy-MM-dd HH:mm:ss') AS dateMin, 
         count(*) AS orders, 
         sum("order.total") AS revenue
     from orders_enriched
-    where ts > ago('PT1H')
+    where ts > ago(%(timeAgo)s)
     group by dateMin
     order by dateMin desc
     LIMIT 10000
     """
 
-    curs.execute(query)
+    curs.execute(query, {"timeAgo": mapping2[time_ago]["period"], "granularity": mapping2[time_ago]["granularity"]})
 
     df_ts = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
 
@@ -123,7 +145,7 @@ if pinot_available:
                 go.Scatter(x=revenue_complete.dateMin, y=revenue_complete.value, mode='lines', line={'dash': 'solid', 'color': 'green'}),
                 go.Scatter(x=revenue_incomplete.dateMin, y=revenue_incomplete.value, mode='lines', line={'dash': 'dash', 'color': 'green'}),
             ])
-            fig.update_layout(showlegend=False, title="Orders per minute", margin=dict(l=0, r=0, t=40, b=0),)
+            fig.update_layout(showlegend=False, title=f"Orders per {mapping2[time_ago]['granularity']}", margin=dict(l=0, r=0, t=40, b=0),)
             fig.update_yaxes(range=[0, df_ts["orders"].max() * 1.1])
             st.plotly_chart(fig, use_container_width=True) 
 
@@ -139,7 +161,7 @@ if pinot_available:
                 go.Scatter(x=revenue_complete.dateMin, y=revenue_complete.value, mode='lines', line={'dash': 'solid', 'color': 'blue'}),
                 go.Scatter(x=revenue_incomplete.dateMin, y=revenue_incomplete.value, mode='lines', line={'dash': 'dash', 'color': 'blue'}),
             ])
-            fig.update_layout(showlegend=False, title="Revenue per minute", margin=dict(l=0, r=0, t=40, b=0),)
+            fig.update_layout(showlegend=False, title=f"Revenue per {mapping2[time_ago]['granularity']}", margin=dict(l=0, r=0, t=40, b=0),)
             fig.update_yaxes(range=[0, df_ts["revenue"].max() * 1.1])
             st.plotly_chart(fig, use_container_width=True) 
 
@@ -186,11 +208,11 @@ if pinot_available:
                 count(*) AS orders, 
                 sum("order.quantity") AS quantity
         FROM orders_enriched
-        where ts > ago('PT1H')
+        where ts > ago(%(timeAgo)s)
         group by product, image
         ORDER BY count(*) DESC
-        LIMIT 10
-        """)
+        LIMIT 5
+        """, {"timeAgo": mapping2[time_ago]["period"]})
 
         df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
         df["quantityPerOrder"] = df["quantity"] / df["orders"]
@@ -206,11 +228,11 @@ if pinot_available:
                 count(*) AS orders, 
                 sum("order.quantity") AS quantity
         FROM orders_enriched
-        where ts > ago('PT1H')
+        where ts > ago(%(timeAgo)s)
         group by category
         ORDER BY count(*) DESC
-        LIMIT 10
-        """)
+        LIMIT 5
+        """, {"timeAgo": mapping2[time_ago]["period"]})
 
         df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
         df["quantityPerOrder"] = df["quantity"] / df["orders"]
@@ -229,7 +251,7 @@ if pinot_available:
            "order.userId" AS userId
     FROM orders_enriched
     ORDER BY ts DESC
-    LIMIT 10
+    LIMIT 5
     """)
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
