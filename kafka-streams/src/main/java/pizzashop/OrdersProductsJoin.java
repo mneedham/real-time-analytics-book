@@ -64,7 +64,7 @@ public class OrdersProductsJoin {
         final Serde<UpdatedOrder> updatedOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(UpdatedOrder.class));
 
-        enrichedOrders.to("enriched-orders", Produced.with(Serdes.Bytes(), updatedOrderSerde));
+        enrichedOrders.to("enriched-orders-multi", Produced.with(Serdes.Bytes(), updatedOrderSerde));
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), props);
         final CountDownLatch latch = new CountDownLatch(1);

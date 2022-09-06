@@ -45,7 +45,7 @@ public class OrderItemsProductsJoin {
 
         final Serde<Order> orderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(Order.class));
-        final KStream<String, Order> orders = builder.stream("orders8",
+        final KStream<String, Order> orders = builder.stream("orders-multi2",
                 Consumed.with(Serdes.String(), orderSerde));
 
         KStream<String, OrderItemWithOrderId> orderItems = orders.flatMap((KeyValueMapper<String, Order, Iterable<KeyValue<String, OrderItemWithOrderId>>>) (key, value) -> {
@@ -64,7 +64,7 @@ public class OrderItemsProductsJoin {
 
         final Serde<Product> productSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(Product.class));
-        final KTable<String, Product> products = builder.table("products6",
+        final KTable<String, Product> products = builder.table("products-multi2",
                 Consumed.with(Serdes.String(), productSerde));
 
         KStream<String, HydratedOrderItem> enrichedOrderItems = orderItems.leftJoin(products, (orderItem, product) -> {
@@ -85,7 +85,7 @@ public class OrderItemsProductsJoin {
         final Serde<HydratedOrderItem> hydratedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(HydratedOrderItem.class));
 
-        enrichedOrderItems.to("enriched-order-items8", Produced.with(Serdes.String(), hydratedOrderItemsSerde));
+        enrichedOrderItems.to("enriched-order-items-multi2", Produced.with(Serdes.String(), hydratedOrderItemsSerde));
 
         final Serde<HydratedOrder> hydratedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(HydratedOrder.class));
@@ -102,8 +102,8 @@ public class OrderItemsProductsJoin {
 //
         hydratedOrders.toStream().peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
 //
-//        hydratedOrders.toStream().selectKey((key, value) -> new Bytes(key.getBytes())).to("hydrated-orders-testing-10", Produced.with(Serdes.Bytes(), hydratedOrdersSerde));
-//        orders.to("orders-testing-10", Produced.with(Serdes.String(), orderSerde));
+        hydratedOrders.toStream().selectKey((key, value) -> new Bytes(key.getBytes())).to("hydrated-orders-testing-multi2", Produced.with(Serdes.Bytes(), hydratedOrdersSerde));
+        orders.to("orders-testing-multi2", Produced.with(Serdes.String(), orderSerde));
 
         final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(CompleteOrder.class));
@@ -121,7 +121,7 @@ public class OrderItemsProductsJoin {
             return completeOrder;
         })
 //                .peek((key, value) -> System.out.println("key = " + key + ", value = " + value))
-                .to("enriched-orders9", Produced.with(Serdes.String(), completeOrderSerde));
+                .to("enriched-orders-multi2", Produced.with(Serdes.String(), completeOrderSerde));
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), props);
         final CountDownLatch latch = new CountDownLatch(1);
