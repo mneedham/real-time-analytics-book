@@ -99,14 +99,32 @@ public class OrderItemsProductsJoin {
                 }, Materialized.with(Serdes.String(), hydratedOrdersSerde));
 
         orders.peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
-//
+
         hydratedOrders.toStream().peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
-//
-        hydratedOrders.toStream().selectKey((key, value) -> new Bytes(key.getBytes())).to("hydrated-orders-testing-multi2", Produced.with(Serdes.Bytes(), hydratedOrdersSerde));
-        orders.to("orders-testing-multi2", Produced.with(Serdes.String(), orderSerde));
+
+        hydratedOrders.toStream().selectKey((key, value) -> key).to("hydrated-orders-testing-multi3", Produced.with(Serdes.String(), hydratedOrdersSerde));
+        orders.to("orders-testing-multi3", Produced.with(Serdes.String(), orderSerde));
 
         final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(CompleteOrder.class));
+
+        GlobalKTable<String, HydratedOrder> hydratedOrderGlobalKTable = new StreamsBuilder().globalTable("hydrated-orders-testing-multi3", Materialized.with(Serdes.String(), hydratedOrdersSerde));
+        orders.join(hydratedOrderGlobalKTable,
+                (key, value) -> key,
+                (value1, value2) -> {
+                    CompleteOrder completeOrder = new CompleteOrder();
+                    completeOrder.id = value1.id;
+                    completeOrder.status = value1.status;
+                    completeOrder.userId = value1.userId;
+                    completeOrder.createdAt = value1.createdAt;
+
+                    if (value2 != null) {
+                        completeOrder.orderItems = value2.orderItems;
+                    }
+                    return completeOrder;
+                })
+//                .peek((key, value) -> System.out.println("key = " + key + ", value = " + value))
+                .to("enriched-orders-multi-global", Produced.with(Serdes.String(), completeOrderSerde));
 
         orders.join(hydratedOrders, (value1, value2) -> {
             CompleteOrder completeOrder = new CompleteOrder();
