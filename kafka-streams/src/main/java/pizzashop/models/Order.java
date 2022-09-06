@@ -12,6 +12,8 @@ public class Order {
     public String status;
     public String createdAt;
 
+    public double price;
+
     public List<OrderItem> items;
 
 //    public int productId;

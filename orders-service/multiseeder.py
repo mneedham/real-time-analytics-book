@@ -6,6 +6,7 @@ import json
 from kafka import KafkaProducer
 import datetime
 import uuid
+import math
 
 # CONFIG
 usersLimit         = 1000
@@ -44,8 +45,11 @@ try:
 
             for product in products:
                 print(product["id"])
-                producer.send('products-multi2', product, product["id"].encode("UTF-8"))
+                producer.send('products-multi9', product, product["id"].encode("UTF-8"))
             producer.flush()
+
+            cursor.execute("SELECT id FROM pizzashop.users")
+            users = [row[0] for row in cursor]
 
             print("Getting product ID and PRICE as tuples...")
             cursor.execute("SELECT id, price FROM pizzashop.products")
@@ -54,26 +58,33 @@ try:
 
             while True:
                 # Get a random a user and a product to order
-                product = random.choice(product_prices)
-                user = random.randint(0,usersLimit-1)
-                purchase_quantity = random.randint(1,5)
+
+                number_of_items = random.randint(1,10)
+
+                items = []
+                for _ in range(0, number_of_items):
+                    product = random.choice(product_prices)
+                    user = random.choice(users)
+                    purchase_quantity = random.randint(1,5)
+                    items.append({
+                        "productId": str(product[0]),
+                        "quantity": purchase_quantity,
+                        "price": product[1]
+                    })
+
+                prices = [item["quantity"] * item["price"] for item in items]
+                total_price = round(math.fsum(prices), 2)
 
                 event = {
                     "id": str(uuid.uuid4()),
                     "createdAt": datetime.datetime.now().isoformat(),
                     "userId": user,
                     "status": "PLACED_ORDER",
-
-                    "items": [
-                        { 
-                            "productId": str(product[0]),
-                            "quantity": purchase_quantity,
-                            "price": product[1]
-                        }
-                    ]
+                    "price": total_price,
+                    "items": items              
                 }
 
-                producer.send('orders-multi2', event, bytes(event["id"].encode("UTF-8")))
+                producer.send('orders-multi9', event, bytes(event["id"].encode("UTF-8")))
 
                 events_processed += 1
                 if events_processed % 100 == 0:

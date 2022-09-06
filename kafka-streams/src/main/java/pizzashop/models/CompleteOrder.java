@@ -8,6 +8,8 @@ public class CompleteOrder {
     public String userId;
     public String status;
     public String createdAt;
+
+    public double price;
     public List<CompleteOrderItem> orderItems = new ArrayList<>();
 
 }

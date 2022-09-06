@@ -44,49 +44,54 @@ public class OrderItemsProductsJoin {
 
         final StreamsBuilder builder = new StreamsBuilder();
 
-        final Serde<Order> orderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(Order.class));
-        KStream<String, Order> orders = builder.stream("orders-multi2",
+        final Serde<Order> orderSerde = Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(Order.class));
+
+        String ordersTopic = "orders-multi9";
+        String productsTopic = "products-multi9";
+        String enrichedOrdersTopic = "enriched-orders-multi9";
+
+        KStream<String, Order> orders = builder.stream(ordersTopic,
                 Consumed.with(Serdes.String(), orderSerde));
 
-        KStream<String, OrderItemWithOrderId> orderItems = orders.flatMap((KeyValueMapper<String, Order, Iterable<KeyValue<String, OrderItemWithOrderId>>>) (key, value) -> {
-            List<KeyValue<String, OrderItemWithOrderId>> result = new ArrayList<>();
+        KStream<String, OrderItemWithOrderId> orderItems = orders
+                .flatMap((key, value) -> {
+                    List<KeyValue<String, OrderItemWithOrderId>> result = new ArrayList<>();
 
-            for (OrderItem item : value.items) {
-                OrderItemWithOrderId orderItemWithOrderId = new OrderItemWithOrderId();
-                orderItemWithOrderId.orderId = value.id;
-                orderItemWithOrderId.price = item.price;
-                orderItemWithOrderId.quantity = item.quantity;
-                orderItemWithOrderId.productId = item.productId;
-                result.add(new KeyValue(String.valueOf(item.productId), orderItemWithOrderId));
-            }
-            return result;
-        });
+                    for (OrderItem item : value.items) {
+                        OrderItemWithOrderId orderItemWithOrderId = new OrderItemWithOrderId();
+                        orderItemWithOrderId.orderId = value.id;
+                        orderItemWithOrderId.price = item.price;
+                        orderItemWithOrderId.quantity = item.quantity;
+                        orderItemWithOrderId.productId = item.productId;
+                        result.add(new KeyValue<>(String.valueOf(item.productId), orderItemWithOrderId));
+                    }
+                    return result;
+                });
 
         final Serde<Product> productSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(Product.class));
-        final KTable<String, Product> products = builder.table("products-multi2",
+
+        final KTable<String, Product> products = builder.table(productsTopic,
                 Consumed.with(Serdes.String(), productSerde));
 
-        KStream<String, HydratedOrderItem> enrichedOrderItems = orderItems.leftJoin(products, (orderItem, product) -> {
-            HydratedOrderItem hydratedOrderItem = new HydratedOrderItem();
-            hydratedOrderItem.product = product;
+        KStream<String, HydratedOrderItem> enrichedOrderItems = orderItems.leftJoin(products,
+                (orderItem, product) -> {
+                    HydratedOrderItem hydratedOrderItem = new HydratedOrderItem();
+                    hydratedOrderItem.product = product;
 
-            OrderItem item = new OrderItem();
-            item.productId = orderItem.productId;
-            item.price = orderItem.price;
-            item.quantity = orderItem.quantity;
+                    OrderItem item = new OrderItem();
+                    item.productId = orderItem.productId;
+                    item.price = orderItem.price;
+                    item.quantity = orderItem.quantity;
 
-            hydratedOrderItem.orderId = orderItem.orderId;
-            hydratedOrderItem.orderItem = item;
+                    hydratedOrderItem.orderId = orderItem.orderId;
+                    hydratedOrderItem.orderItem = item;
 
-            return hydratedOrderItem;
-        });
+                    return hydratedOrderItem;
+                });
 
         final Serde<HydratedOrderItem> hydratedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(HydratedOrderItem.class));
-
-        enrichedOrderItems.to("enriched-order-items-multi2", Produced.with(Serdes.String(), hydratedOrderItemsSerde));
 
         final Serde<HydratedOrder> hydratedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(HydratedOrder.class));
@@ -99,15 +104,9 @@ public class OrderItemsProductsJoin {
                     return aggregate;
                 }, Materialized.with(Serdes.String(), hydratedOrdersSerde));
 
-//        orders.peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
-
-        hydratedOrders.toStream().peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
-
-        hydratedOrders.toStream().selectKey((key, value) -> key).to("hydrated-orders-testing-multi3", Produced.with(Serdes.String(), hydratedOrdersSerde));
-        orders.to("orders-testing-multi3", Produced.with(Serdes.String(), orderSerde));
-
         final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(CompleteOrder.class));
+
 
         orders.toTable().join(hydratedOrders, (value1, value2) -> {
             CompleteOrder completeOrder = new CompleteOrder();
@@ -115,19 +114,16 @@ public class OrderItemsProductsJoin {
             completeOrder.status = value1.status;
             completeOrder.userId = value1.userId;
             completeOrder.createdAt = value1.createdAt;
+            completeOrder.price = value1.price;
 
-            if(value2 != null) {
-                completeOrder.orderItems = value2.orderItems.stream().map(orderItem -> {
-                    CompleteOrderItem completeOrderItem = new CompleteOrderItem();
-                    completeOrderItem.product = orderItem.product;
-                    completeOrderItem.quantity = orderItem.orderItem.quantity;
-                    return completeOrderItem;
-                }).collect(Collectors.toList());
-            }
+            completeOrder.orderItems = value2.orderItems.stream().map(orderItem -> {
+                CompleteOrderItem completeOrderItem = new CompleteOrderItem();
+                completeOrderItem.product = orderItem.product;
+                completeOrderItem.quantity = orderItem.orderItem.quantity;
+                return completeOrderItem;
+            }).collect(Collectors.toList());
             return completeOrder;
-        }).toStream()
-//                .peek((key, value) -> System.out.println("key = " + key + ", value = " + value))
-                .to("enriched-orders-multi3", Produced.with(Serdes.String(), completeOrderSerde));
+        }).toStream().to(enrichedOrdersTopic, Produced.with(Serdes.String(), completeOrderSerde));
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), props);
         final CountDownLatch latch = new CountDownLatch(1);
