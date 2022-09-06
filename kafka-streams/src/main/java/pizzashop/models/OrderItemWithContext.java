@@ -1,7 +1,6 @@
 package pizzashop.models;
 
-public class HydratedOrderItem  {
+public class OrderItemWithContext {
     public String orderId;
-    public Product product;
     public OrderItem orderItem;
 }

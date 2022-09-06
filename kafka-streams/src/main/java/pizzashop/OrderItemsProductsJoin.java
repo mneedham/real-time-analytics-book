@@ -3,7 +3,6 @@ package pizzashop;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -11,10 +10,9 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
 import pizzashop.deser.JsonDeserializer;
 import pizzashop.deser.JsonSerializer;
-import pizzashop.deser.OrderItemWithOrderIdSerde;
+import pizzashop.deser.OrderItemWithContextSerde;
 import pizzashop.models.*;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -34,7 +32,7 @@ public class OrderItemsProductsJoin {
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
                 System.getenv().getOrDefault("BOOTSTRAP_SERVER", "localhost:29092"));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, OrderItemWithOrderIdSerde.class.getName());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, OrderItemWithContextSerde.class.getName());
 
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 1000L);
@@ -45,68 +43,45 @@ public class OrderItemsProductsJoin {
         final StreamsBuilder builder = new StreamsBuilder();
 
         final Serde<Order> orderSerde = Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(Order.class));
+        final Serde<Product> productSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+                new JsonDeserializer<>(Product.class));
+        final Serde<HydratedOrderItem> hydratedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+                new JsonDeserializer<>(HydratedOrderItem.class));
+        final Serde<HydratedOrder> hydratedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+                new JsonDeserializer<>(HydratedOrder.class));
+        final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+                new JsonDeserializer<>(CompleteOrder.class));
 
         String ordersTopic = "orders-multi9";
         String productsTopic = "products-multi9";
-        String enrichedOrdersTopic = "enriched-orders-multi9";
+        String enrichedOrdersTopic = "enriched-orders-multi10";
 
-        KStream<String, Order> orders = builder.stream(ordersTopic,
-                Consumed.with(Serdes.String(), orderSerde));
+        KStream<String, Order> orders = builder.stream(ordersTopic, Consumed.with(Serdes.String(), orderSerde));
+        KTable<String, Product> products = builder.table(productsTopic, Consumed.with(Serdes.String(), productSerde));
 
-        KStream<String, OrderItemWithOrderId> orderItems = orders
-                .flatMap((key, value) -> {
-                    List<KeyValue<String, OrderItemWithOrderId>> result = new ArrayList<>();
+        KStream<String, OrderItemWithContext> orderItems = orders.flatMap((key, value) -> {
+            List<KeyValue<String, OrderItemWithContext>> result = new ArrayList<>();
+            for (OrderItem item : value.items) {
+                OrderItemWithContext orderItemWithContext = new OrderItemWithContext();
+                orderItemWithContext.orderId = value.id;
+                orderItemWithContext.orderItem = item;
+                result.add(new KeyValue<>(String.valueOf(item.productId), orderItemWithContext));
+            }
+            return result;
+        });
 
-                    for (OrderItem item : value.items) {
-                        OrderItemWithOrderId orderItemWithOrderId = new OrderItemWithOrderId();
-                        orderItemWithOrderId.orderId = value.id;
-                        orderItemWithOrderId.price = item.price;
-                        orderItemWithOrderId.quantity = item.quantity;
-                        orderItemWithOrderId.productId = item.productId;
-                        result.add(new KeyValue<>(String.valueOf(item.productId), orderItemWithOrderId));
-                    }
-                    return result;
-                });
-
-        final Serde<Product> productSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(Product.class));
-
-        final KTable<String, Product> products = builder.table(productsTopic,
-                Consumed.with(Serdes.String(), productSerde));
-
-        KStream<String, HydratedOrderItem> enrichedOrderItems = orderItems.leftJoin(products,
-                (orderItem, product) -> {
+        KTable<String, HydratedOrder> hydratedOrders = orderItems.join(products, (orderItem, product) -> {
                     HydratedOrderItem hydratedOrderItem = new HydratedOrderItem();
-                    hydratedOrderItem.product = product;
-
-                    OrderItem item = new OrderItem();
-                    item.productId = orderItem.productId;
-                    item.price = orderItem.price;
-                    item.quantity = orderItem.quantity;
-
                     hydratedOrderItem.orderId = orderItem.orderId;
-                    hydratedOrderItem.orderItem = item;
-
+                    hydratedOrderItem.orderItem = orderItem.orderItem;
+                    hydratedOrderItem.product = product;
                     return hydratedOrderItem;
-                });
-
-        final Serde<HydratedOrderItem> hydratedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(HydratedOrderItem.class));
-
-        final Serde<HydratedOrder> hydratedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(HydratedOrder.class));
-
-        KTable<String, HydratedOrder> hydratedOrders = enrichedOrderItems
-                .groupBy((key, value) -> value.orderId,
-                        Grouped.with(Serdes.String(), hydratedOrderItemsSerde))
+                })
+                .groupBy((key, value) -> value.orderId, Grouped.with(Serdes.String(), hydratedOrderItemsSerde))
                 .aggregate(HydratedOrder::new, (key, value, aggregate) -> {
                     aggregate.addOrderItem(value);
                     return aggregate;
                 }, Materialized.with(Serdes.String(), hydratedOrdersSerde));
-
-        final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(CompleteOrder.class));
-
 
         orders.toTable().join(hydratedOrders, (value1, value2) -> {
             CompleteOrder completeOrder = new CompleteOrder();
