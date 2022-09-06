@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 
 public class OrderItemsProductsJoin {
@@ -45,7 +46,7 @@ public class OrderItemsProductsJoin {
 
         final Serde<Order> orderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(Order.class));
-        final KStream<String, Order> orders = builder.stream("orders-multi2",
+        KStream<String, Order> orders = builder.stream("orders-multi2",
                 Consumed.with(Serdes.String(), orderSerde));
 
         KStream<String, OrderItemWithOrderId> orderItems = orders.flatMap((KeyValueMapper<String, Order, Iterable<KeyValue<String, OrderItemWithOrderId>>>) (key, value) -> {
@@ -98,7 +99,7 @@ public class OrderItemsProductsJoin {
                     return aggregate;
                 }, Materialized.with(Serdes.String(), hydratedOrdersSerde));
 
-        orders.peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
+//        orders.peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
 
         hydratedOrders.toStream().peek((key, value) -> System.out.println("key = " + key + ", value = " + value));
 
@@ -108,25 +109,7 @@ public class OrderItemsProductsJoin {
         final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(CompleteOrder.class));
 
-        GlobalKTable<String, HydratedOrder> hydratedOrderGlobalKTable = new StreamsBuilder().globalTable("hydrated-orders-testing-multi3", Materialized.with(Serdes.String(), hydratedOrdersSerde));
-        orders.join(hydratedOrderGlobalKTable,
-                (key, value) -> key,
-                (value1, value2) -> {
-                    CompleteOrder completeOrder = new CompleteOrder();
-                    completeOrder.id = value1.id;
-                    completeOrder.status = value1.status;
-                    completeOrder.userId = value1.userId;
-                    completeOrder.createdAt = value1.createdAt;
-
-                    if (value2 != null) {
-                        completeOrder.orderItems = value2.orderItems;
-                    }
-                    return completeOrder;
-                })
-//                .peek((key, value) -> System.out.println("key = " + key + ", value = " + value))
-                .to("enriched-orders-multi-global", Produced.with(Serdes.String(), completeOrderSerde));
-
-        orders.join(hydratedOrders, (value1, value2) -> {
+        orders.toTable().join(hydratedOrders, (value1, value2) -> {
             CompleteOrder completeOrder = new CompleteOrder();
             completeOrder.id = value1.id;
             completeOrder.status = value1.status;
@@ -134,12 +117,17 @@ public class OrderItemsProductsJoin {
             completeOrder.createdAt = value1.createdAt;
 
             if(value2 != null) {
-                completeOrder.orderItems = value2.orderItems;
+                completeOrder.orderItems = value2.orderItems.stream().map(orderItem -> {
+                    CompleteOrderItem completeOrderItem = new CompleteOrderItem();
+                    completeOrderItem.product = orderItem.product;
+                    completeOrderItem.quantity = orderItem.orderItem.quantity;
+                    return completeOrderItem;
+                }).collect(Collectors.toList());
             }
             return completeOrder;
-        })
+        }).toStream()
 //                .peek((key, value) -> System.out.println("key = " + key + ", value = " + value))
-                .to("enriched-orders-multi2", Produced.with(Serdes.String(), completeOrderSerde));
+                .to("enriched-orders-multi3", Produced.with(Serdes.String(), completeOrderSerde));
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), props);
         final CountDownLatch latch = new CountDownLatch(1);
