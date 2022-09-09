@@ -1,0 +1,23 @@
+version: "3"
+services:
+  dashboard-enriched:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard-enriched
+    ports:
+      - "8502:8501"
+    depends_on:
+      - pinot-controller
+    volumes:
+      - ./streamlit/app_enriched.py:/workdir/app.py
+  kafka-streams:
+    build: kafka-streams
+    restart: unless-stopped
+    container_name: kafka-streams
+    environment:
+      - BOOTSTRAP_SERVER=kafka:9092
+      - ORDERS_TOPIC=orders
+      - PRODUCTS_TOPIC=products
+      - ENRICHED_ORDERS_TOPIC=enriched-orders
+    depends_on:
+      - kafka

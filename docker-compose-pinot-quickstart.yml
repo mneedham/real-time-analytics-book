@@ -1,0 +1,25 @@
+version: "3"
+services:
+  pinot-controller:
+    image: apachepinot/pinot:0.10.0
+    command: "QuickStart -type EMPTY"
+    container_name: "pinot-controller"
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "8000:8000"
+    depends_on:
+      - zookeeper
+  pinot-add-table:
+    image: apachepinot/pinot:0.10.0
+    container_name: "pinot-add-table"
+    volumes:
+      - ./pinot/config:/config
+    command: "'./bin/pinot-admin.sh AddTable -schemaFile /config/orders/schema.json -tableConfigFile /config/orders/table.json -controllerHost pinot-controller -exec && \
+               ./bin/pinot-admin.sh AddTable -schemaFile /config/orders_enriched/schema.json -tableConfigFile /config/orders_enriched/table.json -controllerHost pinot-controller -exec'"
+    restart: on-failure
+    entrypoint: "bash -c"
+    environment:
+    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
+    depends_on:
+      - pinot-controller

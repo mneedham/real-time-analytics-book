@@ -1,0 +1,12 @@
+version: "3"
+services:
+  dashboard:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - pinot-broker
+    volumes:
+      - ./streamlit/app.py:/workdir/app.py

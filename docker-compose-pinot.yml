@@ -1,0 +1,41 @@
+version: "3"
+services:
+  pinot-controller:
+    image: apachepinot/pinot:0.10.0
+    command: "StartController -zkAddress zookeeper:2181"
+    container_name: "pinot-controller"
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    depends_on:
+      - zookeeper
+    healthcheck: {test: nc -z localhost 9000, interval: 1s}
+  pinot-broker:
+    image: apachepinot/pinot:0.10.0
+    command: "StartBroker -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    container_name: "pinot-broker"
+    ports:
+      - "8099:8099"
+    depends_on:
+      - pinot-controller
+  pinot-server:
+    image: apachepinot/pinot:0.10.0
+    container_name: "pinot-server"
+    command: "StartServer -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    depends_on:
+      - pinot-broker
+  pinot-add-table:
+    image: apachepinot/pinot:0.10.0
+    container_name: "pinot-add-table"
+    volumes:
+      - ./pinot/config:/config
+    command: "'./bin/pinot-admin.sh AddTable -schemaFile /config/orders/schema.json -tableConfigFile /config/orders/table.json -controllerHost pinot-controller -exec && \
+               ./bin/pinot-admin.sh AddTable -schemaFile /config/orders_enriched/schema.json -tableConfigFile /config/orders_enriched/table.json -controllerHost pinot-controller -exec'"
+    restart: on-failure
+    entrypoint: "bash -c"
+    environment:
+    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
+    depends_on:
+      - pinot-controller

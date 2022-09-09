@@ -30,6 +30,14 @@
             {
                 "columnName": "ts",
                 "transformFunction": "FromDateTime(createdAt, 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS')"
+            },
+            {
+                "columnName": "totalQuantity",
+                "transformFunction": "JSONPATHLONG(items, '$.sum($.[*].quantity)'),"
+            },
+            {
+                "columnName": "productsOrdered",
+                "transformFunction": "arrayLength(arrayDistinctString(JSONPATHARRAY(items, '$.[*].productId')))"
             }
         ]
     },

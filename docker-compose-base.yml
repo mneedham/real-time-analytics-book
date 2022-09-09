@@ -49,4 +49,6 @@ services:
       - mysql
       - kafka
     environment:
-      - PINOT_SERVER=mysql
+      - MYSQL_SERVER=mysql
+      - KAFKA_BROKER_HOSTNAME=kafka
+      - KAFKA_BROKER_PORT=9092

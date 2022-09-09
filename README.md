@@ -7,7 +7,10 @@ The code for Dunith Dhanushka and Mark Needham's upcoming book on Real-Time Anal
 ## Install components
 
 ```bash
-docker-compose up
+docker-compose \
+  -f docker-compose-base.yml \
+  -f docker-compose-pinot.yml \
+  -f docker-compose-dashboard.yml up
 ```
 
 Once that's run, you can navigate to the following:

@@ -10,21 +10,25 @@
             "dataType": "INT"
         },
         {
-            "name": "productId",
-            "dataType": "INT"
-        },
-        {
             "name": "status",
             "dataType": "STRING"
+        },
+        {
+            "name": "items",
+            "dataType": "JSON"
         }
     ],
     "metricFieldSpecs": [
         {
-            "name": "quantity",
+            "name": "productsOrdered",
             "dataType": "INT"
         },
         {
-            "name": "total",
+            "name": "totalQuantity",
+            "dataType": "INT"
+        },
+        {
+            "name": "price",
             "dataType": "DOUBLE"
         }
     ],
