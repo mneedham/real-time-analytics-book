@@ -52,9 +52,9 @@ public class OrderItemsProductsJoin {
         final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(CompleteOrder.class));
 
-        String ordersTopic = "orders-multi9";
-        String productsTopic = "products-multi9";
-        String enrichedOrdersTopic = "enriched-orders-multi10";
+        String ordersTopic = System.getenv().getOrDefault("ORDERS_TOPIC",  "orders-multi9");
+        String productsTopic = System.getenv().getOrDefault("PRODUCTS_TOPIC",  "products-multi9");
+        String enrichedOrdersTopic = System.getenv().getOrDefault("ENRICHED_ORDERS_TOPIC",  "enriched-orders-multi10");
 
         KStream<String, Order> orders = builder.stream(ordersTopic, Consumed.with(Serdes.String(), orderSerde));
         KTable<String, Product> products = builder.table(productsTopic, Consumed.with(Serdes.String(), productSerde));

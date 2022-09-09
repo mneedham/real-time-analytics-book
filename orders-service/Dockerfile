@@ -13,4 +13,4 @@ RUN pip install --upgrade pip
 
 COPY . .
 
-ENTRYPOINT ["python", "seeder.py"]
+ENTRYPOINT ["python", "multiseeder.py"]

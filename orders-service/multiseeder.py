@@ -7,11 +7,12 @@ from kafka import KafkaProducer
 import datetime
 import uuid
 import math
+import os
 
 # CONFIG
 usersLimit         = 1000
 orderInterval      = 100
-mysqlHost          = 'localhost'
+mysqlHost          = os.environ.get("PINOT_SERVER", "localhost")
 mysqlPort          = '3306'
 mysqlUser          = 'mysqluser'
 mysqlPass          = 'mysqlpw'
@@ -84,7 +85,7 @@ try:
                     "items": items              
                 }
 
-                producer.send('orders-multi9', event, bytes(event["id"].encode("UTF-8")))
+                producer.send('orders', event, bytes(event["id"].encode("UTF-8")))
 
                 events_processed += 1
                 if events_processed % 100 == 0:
