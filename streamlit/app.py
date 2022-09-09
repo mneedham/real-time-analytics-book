@@ -60,8 +60,6 @@ if pinot_available:
     curs.execute(query)
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
-    
-
     st.subheader("Orders in the last minute")
 
     metric1, metric2, metric3 = st.columns(3)
@@ -90,7 +88,7 @@ if pinot_available:
     )
 
     query = """
-    select ToDateTime(DATETRUNC('minute', ts), 'yyyy-MM-dd hh:mm:ss') AS dateMin, 
+    select ToDateTime(DATETRUNC('minute', ts), 'yyyy-MM-dd HH:mm:ss') AS dateMin, 
         count(*) AS orders, 
         sum(price) AS revenue
     from orders 
