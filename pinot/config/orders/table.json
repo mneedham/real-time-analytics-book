@@ -33,11 +33,11 @@
             },
             {
                 "columnName": "totalQuantity",
-                "transformFunction": "JSONPATHLONG(items, '$.sum($.[*].quantity)'),"
+                "transformFunction": "JSONPATHLONG(items, '$.sum($.[*].quantity)')"
             },
             {
                 "columnName": "productsOrdered",
-                "transformFunction": "arrayLength(arrayDistinctString(JSONPATHARRAY(items, '$.[*].productId')))"
+                "transformFunction": "JSONPATHARRAY(items, '$.length()')"
             }
         ]
     },

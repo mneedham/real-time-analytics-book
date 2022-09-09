@@ -7,6 +7,9 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      - pinot-broker
+      - pinot-controller
     volumes:
       - ./streamlit/app.py:/workdir/app.py
+    environment:
+      - PINOT_SERVER
+      - PINOT_PORT

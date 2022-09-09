@@ -43,14 +43,16 @@ try:
 
     pinot_available = curs.description is not None
 except Exception as e:
-    st.warning(f"Unable to connect to Apache Pinot [{pinot_host}:{pinot_port}]",icon="⚠️")
+    st.warning(f"""Unable to connect to or query Apache Pinot [{pinot_host}:{pinot_port}] 
+
+Exception: {e}""",icon="⚠️")
 
 if pinot_available:
     query = """
     select count(*) FILTER(WHERE  ts > ago('PT1M')) AS events1Min,
         count(*) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS events1Min2Min,
-        sum(total) FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
-        sum(total) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
+        sum(price) FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
+        sum(price) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
     from orders 
     where ts > ago('PT2M')
     limit 1
@@ -58,6 +60,7 @@ if pinot_available:
     curs.execute(query)
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
+    
 
     st.subheader("Orders in the last minute")
 
@@ -89,7 +92,7 @@ if pinot_available:
     query = """
     select ToDateTime(DATETRUNC('minute', ts), 'yyyy-MM-dd hh:mm:ss') AS dateMin, 
         count(*) AS orders, 
-        sum(total) AS revenue
+        sum(price) AS revenue
     from orders 
     where ts > ago('PT1H')
     group by dateMin
@@ -138,7 +141,7 @@ if pinot_available:
             st.plotly_chart(fig, use_container_width=True) 
 
     curs.execute("""
-    SELECT ts, productId, quantity, status, total, userId
+    SELECT ToDateTime(ts, 'HH:mm:ss:SSS') AS dateTime, status, price, userId, productsOrdered, totalQuantity
     FROM orders
     ORDER BY ts DESC
     LIMIT 10
@@ -159,8 +162,10 @@ if pinot_available:
     # Inject CSS with Markdown
     st.markdown(hide_table_row_index, unsafe_allow_html=True)
 
-
-    st.dataframe(df)
+    st.markdown(
+        df.to_html(),
+        unsafe_allow_html=True
+    )
 
     curs.close()
 

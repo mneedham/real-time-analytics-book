@@ -19,6 +19,8 @@ mysqlPass          = 'mysqlpw'
 debeziumHostPort   = 'debezium:8083'
 kafkaHostPort      = f"{os.environ.get('KAFKA_BROKER_HOSTNAME', 'localhost')}:{os.environ.get('KAFKA_BROKER_PORT', '29092')}"
 
+print(f"Kafka broker: {kafkaHostPort}")
+
 producer = KafkaProducer(bootstrap_servers=kafkaHostPort, api_version=(7, 1, 0), 
   value_serializer=lambda m: json.dumps(m).encode('utf-8'))
 
