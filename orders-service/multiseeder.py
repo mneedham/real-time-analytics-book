@@ -46,7 +46,7 @@ try:
 
             for product in products:
                 print(product["id"])
-                producer.send('products-multi9', product, product["id"].encode("UTF-8"))
+                producer.send('products', product, product["id"].encode("UTF-8"))
             producer.flush()
 
             cursor.execute("SELECT id FROM pizzashop.users")
