@@ -29,7 +29,7 @@
         "transformConfigs": [
             {
                 "columnName": "ts",
-                "transformFunction": "FromDateTime(\"order.createdAt\", 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS')"
+                "transformFunction": "FromDateTime(\"createdAt\", 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS')"
             }
         ]
     },

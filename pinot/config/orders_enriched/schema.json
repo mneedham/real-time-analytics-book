@@ -2,45 +2,25 @@
     "schemaName": "orders_enriched",
     "dimensionFieldSpecs": [
         {
-            "name": "order.id",
+            "name": "id",
             "dataType": "STRING"
         },
         {
-            "name": "order.userId",
+            "name": "userId",
             "dataType": "INT"
         },
         {
-            "name": "order.productId",
-            "dataType": "INT"
-        },
-        {
-            "name": "order.status",
+            "name": "status",
             "dataType": "STRING"
         },
         {
-            "name": "product.name",
-            "dataType": "STRING"
-        },
-        {
-            "name": "product.category",
-            "dataType": "STRING"
-        },
-        {
-            "name": "product.image",
-            "dataType": "STRING"
+            "name": "items",
+            "dataType": "JSON"
         }
     ],
     "metricFieldSpecs": [
         {
-            "name": "order.quantity",
-            "dataType": "INT"
-        },
-        {
-            "name": "order.total",
-            "dataType": "DOUBLE"
-        },
-        {
-            "name": "product.price",
+            "name": "price",
             "dataType": "DOUBLE"
         }
     ],

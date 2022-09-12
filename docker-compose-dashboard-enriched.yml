@@ -10,6 +10,9 @@ services:
       - pinot-controller
     volumes:
       - ./streamlit/app_enriched.py:/workdir/app.py
+    environment:
+      - PINOT_SERVER
+      - PINOT_PORT
   kafka-streams:
     build: kafka-streams
     restart: unless-stopped

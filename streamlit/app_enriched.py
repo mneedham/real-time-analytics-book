@@ -65,12 +65,15 @@ curs = conn.cursor()
 
 pinot_available = False
 try:
-    curs.execute("select * FROM orders where ts > ago('PT2M')")
+    curs.execute("select * FROM orders_enriched where ts > ago('PT2M')")
     if not curs.description:
-        st.warning("Connected to Pinot, but no orders imported",icon="⚠️")
-    pinot_available = True
+        st.warning("Connected to Pinot, but no orders imported",icon="⚠️")    
+
+    pinot_available = curs.description is not None
 except Exception as e:
-    st.warning(f"Unable to connect to Apache Pinot [{pinot_host}:{pinot_port}]",icon="⚠️")
+    st.warning(f"""Unable to connect to or query Apache Pinot [{pinot_host}:{pinot_port}] 
+
+Exception: {e}""",icon="⚠️")
 
 if pinot_available:
     query = """
