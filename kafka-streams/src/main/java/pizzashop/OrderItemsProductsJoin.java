@@ -91,7 +91,7 @@ public class OrderItemsProductsJoin {
             completeOrder.createdAt = value1.createdAt;
             completeOrder.price = value1.price;
 
-            completeOrder.orderItems = value2.orderItems.stream().map(orderItem -> {
+            completeOrder.items = value2.orderItems.stream().map(orderItem -> {
                 CompleteOrderItem completeOrderItem = new CompleteOrderItem();
                 completeOrderItem.product = orderItem.product;
                 completeOrderItem.quantity = orderItem.orderItem.quantity;

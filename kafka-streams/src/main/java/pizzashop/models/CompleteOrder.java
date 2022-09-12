@@ -10,6 +10,6 @@ public class CompleteOrder {
     public String createdAt;
 
     public double price;
-    public List<CompleteOrderItem> orderItems = new ArrayList<>();
+    public List<CompleteOrderItem> items = new ArrayList<>();
 
 }

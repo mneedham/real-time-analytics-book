@@ -1,0 +1,55 @@
+{
+    "schemaName": "order_items_enriched",
+    "dimensionFieldSpecs": [
+        {
+            "name": "id",
+            "dataType": "STRING"
+        },
+        {
+            "name": "userId",
+            "dataType": "INT"
+        },
+        {
+            "name": "status",
+            "dataType": "STRING"
+        },
+        {
+            "name": "items.product.id",
+            "dataType": "STRING"
+        },
+        {
+            "name": "items.product.name",
+            "dataType": "STRING"
+        },
+        {
+            "name": "items.product.category",
+            "dataType": "STRING"
+        },
+        {
+            "name": "items.product.image",
+            "dataType": "STRING"
+        }
+    ],
+    "metricFieldSpecs": [
+        {
+            "name": "price",
+            "dataType": "DOUBLE"
+        },
+        {
+            "name": "items.product.price",
+            "dataType": "DOUBLE"
+        },
+        {
+            "name": "items.quantity",
+            "dataType": "INT"
+        }
+    ],
+    "dateTimeFieldSpecs": [
+        {
+            "name": "ts",
+            "dataType": "TIMESTAMP",
+            "format": "1:MILLISECONDS:EPOCH",
+            "granularity": "1:MILLISECONDS"
+        }
+    ]
+}

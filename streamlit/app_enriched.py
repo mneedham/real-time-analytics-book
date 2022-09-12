@@ -65,7 +65,7 @@ curs = conn.cursor()
 
 pinot_available = False
 try:
-    curs.execute("select * FROM orders_enriched where ts > ago('PT2M')")
+    curs.execute("select * FROM orders where ts > ago('PT2M')")
     if not curs.description:
         st.warning("Connected to Pinot, but no orders imported",icon="⚠️")    
 
@@ -79,9 +79,9 @@ if pinot_available:
     query = """
     select count(*) FILTER(WHERE  ts > ago('PT1M')) AS events1Min,
         count(*) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS events1Min2Min,
-        sum("order.total") FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
-        sum("order.total") FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
-    from orders_enriched
+        sum("price") FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
+        sum("price") FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
+    from orders
     where ts > ago(%(timeAgo)s)
     limit 1
     """
@@ -120,8 +120,8 @@ if pinot_available:
     query = """
     select ToDateTime(DATETRUNC(%(granularity)s, ts), 'yyyy-MM-dd HH:mm:ss') AS dateMin, 
         count(*) AS orders, 
-        sum("order.total") AS revenue
-    from orders_enriched
+        sum(price) AS revenue
+    from orders
     where ts > ago(%(timeAgo)s)
     group by dateMin
     order by dateMin desc
@@ -206,11 +206,11 @@ if pinot_available:
         st.subheader("Most popular items")
 
         curs.execute("""
-        SELECT "product.name" AS product, 
-            "product.image" AS image,
-                count(*) AS orders, 
-                sum("order.quantity") AS quantity
-        FROM orders_enriched
+        SELECT "items.product.name" AS product, 
+            "items.product.image" AS image,
+                distinctcount(id) AS orders,
+                sum("items.quantity") AS quantity
+        FROM order_items_enriched
         where ts > ago(%(timeAgo)s)
         group by product, image
         ORDER BY count(*) DESC
@@ -227,10 +227,10 @@ if pinot_available:
         st.subheader("Most popular categories")
 
         curs.execute("""
-        SELECT "product.category" AS category, 
-                count(*) AS orders, 
-                sum("order.quantity") AS quantity
-        FROM orders_enriched
+        SELECT "items.product.category" AS category, 
+                distinctcount(id) AS orders,
+                sum("items.quantity") AS quantity
+        FROM order_items_enriched
         where ts > ago(%(timeAgo)s)
         group by category
         ORDER BY count(*) DESC
@@ -244,17 +244,10 @@ if pinot_available:
         st.markdown(html, unsafe_allow_html=True)
 
     curs.execute("""
-    SELECT ToDateTime(ts, 'HH:mm:ss:SSS') AS tsms, 
-           "product.name" AS product, 
-            "product.image" AS image,
-            "product.category" AS category,
-           "order.quantity" as quantity, 
-           "order.status" As status, 
-           "order.total" AS total, 
-           "order.userId" AS userId
-    FROM orders_enriched
+    SELECT ToDateTime(ts, 'HH:mm:ss:SSS') AS dateTime, status, price, userId, productsOrdered, totalQuantity
+    FROM orders
     ORDER BY ts DESC
-    LIMIT 5
+    LIMIT 10
     """)
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
