@@ -206,10 +206,10 @@ if pinot_available:
         st.subheader("Most popular items")
 
         curs.execute("""
-        SELECT "items.product.name" AS product, 
-            "items.product.image" AS image,
-                distinctcount(id) AS orders,
-                sum("items.quantity") AS quantity
+        SELECT "product.name" AS product, 
+               "product.image" AS image,
+                distinctcount(orderId) AS orders,
+                sum("orderItem.quantity") AS quantity
         FROM order_items_enriched
         where ts > ago(%(timeAgo)s)
         group by product, image
@@ -227,9 +227,9 @@ if pinot_available:
         st.subheader("Most popular categories")
 
         curs.execute("""
-        SELECT "items.product.category" AS category, 
-                distinctcount(id) AS orders,
-                sum("items.quantity") AS quantity
+        SELECT "product.category" AS category, 
+                distinctcount(orderId) AS orders,
+                sum("orderItem.quantity") AS quantity
         FROM order_items_enriched
         where ts > ago(%(timeAgo)s)
         group by category

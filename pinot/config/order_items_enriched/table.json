@@ -15,7 +15,7 @@
         "streamConfigs": {
             "streamType": "kafka",
             "stream.kafka.consumer.type": "lowLevel",
-            "stream.kafka.topic.name": "enriched-orders",
+            "stream.kafka.topic.name": "enriched-order-items",
             "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
             "stream.kafka.consumer.factory.class.name": "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory", 
             "stream.kafka.broker.list": "kafka:9092",

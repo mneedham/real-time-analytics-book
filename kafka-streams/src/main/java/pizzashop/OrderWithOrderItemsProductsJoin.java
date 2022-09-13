@@ -20,7 +20,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 
-public class OrderItemsProductsJoin {
+public class OrderWithOrderItemsProductsJoin {
 
     public static void main(String[] args) {
         final Properties props = new Properties();
@@ -64,23 +64,41 @@ public class OrderItemsProductsJoin {
             for (OrderItem item : value.items) {
                 OrderItemWithContext orderItemWithContext = new OrderItemWithContext();
                 orderItemWithContext.orderId = value.id;
-                orderItemWithContext.createdAt = value.createdAt;
                 orderItemWithContext.orderItem = item;
                 result.add(new KeyValue<>(String.valueOf(item.productId), orderItemWithContext));
             }
             return result;
         });
 
-        KStream<String, HydratedOrderItem> hydratedOrderItems = orderItems.join(products, (orderItem, product) -> {
-            HydratedOrderItem hydratedOrderItem = new HydratedOrderItem();
-            hydratedOrderItem.orderId = orderItem.orderId;
-            hydratedOrderItem.createdAt = orderItem.createdAt;
-            hydratedOrderItem.orderItem = orderItem.orderItem;
-            hydratedOrderItem.product = product;
-            return hydratedOrderItem;
-        });
+        KTable<String, HydratedOrder> hydratedOrders = orderItems.join(products, (orderItem, product) -> {
+                    HydratedOrderItem hydratedOrderItem = new HydratedOrderItem();
+                    hydratedOrderItem.orderId = orderItem.orderId;
+                    hydratedOrderItem.orderItem = orderItem.orderItem;
+                    hydratedOrderItem.product = product;
+                    return hydratedOrderItem;
+                })
+                .groupBy((key, value) -> value.orderId, Grouped.with(Serdes.String(), hydratedOrderItemsSerde))
+                .aggregate(HydratedOrder::new, (key, value, aggregate) -> {
+                    aggregate.addOrderItem(value);
+                    return aggregate;
+                }, Materialized.with(Serdes.String(), hydratedOrdersSerde));
 
-        hydratedOrderItems.to(enrichedOrdersTopic, Produced.with(Serdes.String(), hydratedOrderItemsSerde));
+        orders.toTable().join(hydratedOrders, (value1, value2) -> {
+            CompleteOrder completeOrder = new CompleteOrder();
+            completeOrder.id = value1.id;
+            completeOrder.status = value1.status;
+            completeOrder.userId = value1.userId;
+            completeOrder.createdAt = value1.createdAt;
+            completeOrder.price = value1.price;
+
+            completeOrder.items = value2.orderItems.stream().map(orderItem -> {
+                CompleteOrderItem completeOrderItem = new CompleteOrderItem();
+                completeOrderItem.product = orderItem.product;
+                completeOrderItem.quantity = orderItem.orderItem.quantity;
+                return completeOrderItem;
+            }).collect(Collectors.toList());
+            return completeOrder;
+        }).toStream().to(enrichedOrdersTopic, Produced.with(Serdes.String(), completeOrderSerde));
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), props);
         final CountDownLatch latch = new CountDownLatch(1);
