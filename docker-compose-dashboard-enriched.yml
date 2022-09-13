@@ -21,6 +21,6 @@ services:
       - BOOTSTRAP_SERVER=kafka:9092
       - ORDERS_TOPIC=orders
       - PRODUCTS_TOPIC=products
-      - ENRICHED_ORDERS_TOPIC=enriched-orders
+      - ENRICHED_ORDERS_TOPIC=enriched-order-items
     depends_on:
       - kafka

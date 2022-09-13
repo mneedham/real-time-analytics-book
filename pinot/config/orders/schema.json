@@ -1,43 +1,22 @@
 {
     "schemaName": "orders",
     "dimensionFieldSpecs": [
-        {
-            "name": "id",
-            "dataType": "STRING"
-        },
-        {
-            "name": "userId",
-            "dataType": "INT"
-        },
-        {
-            "name": "status",
-            "dataType": "STRING"
-        },
-        {
-            "name": "items",
-            "dataType": "JSON"
-        }
+      {"name": "id", "dataType": "STRING"},
+      {"name": "userId", "dataType": "INT"},
+      {"name": "status", "dataType": "STRING"},
+      {"name": "items", "dataType": "JSON"}
     ],
     "metricFieldSpecs": [
-        {
-            "name": "productsOrdered",
-            "dataType": "INT"
-        },
-        {
-            "name": "totalQuantity",
-            "dataType": "INT"
-        },
-        {
-            "name": "price",
-            "dataType": "DOUBLE"
-        }
+      {"name": "productsOrdered", "dataType": "INT"},
+      {"name": "totalQuantity", "dataType": "INT"},
+      {"name": "price", "dataType": "DOUBLE"}
     ],
     "dateTimeFieldSpecs": [
-        {
-            "name": "ts",
-            "dataType": "TIMESTAMP",
-            "format": "1:MILLISECONDS:EPOCH",
-            "granularity": "1:MILLISECONDS"
-        }
+      {
+        "name": "ts",
+        "dataType": "TIMESTAMP",
+        "format": "1:MILLISECONDS:EPOCH",
+        "granularity": "1:MILLISECONDS"
+      }
     ]
-}
+  }
