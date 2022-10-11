@@ -10,7 +10,17 @@ The code for Dunith Dhanushka and Mark Needham's upcoming book on Real-Time Anal
 docker-compose \
   -f docker-compose-base.yml \
   -f docker-compose-pinot.yml \
+  -f docker-compose-dashboard-enriched.yml \
   -f docker-compose-dashboard.yml up
+```
+
+```bash
+docker-compose \
+  -f docker-compose-base.yml \
+  -f docker-compose-pinot-m1.yml \
+  -f docker-compose-dashboard.yml \
+  -f docker-compose-dashboard-enriched.yml \
+  up
 ```
 
 Once that's run, you can navigate to the following:
@@ -24,7 +34,7 @@ Once that's run, you can navigate to the following:
 ```
 docker run -v $PWD/pinot/config:/config \
   --network real-time-analytics-book_default \
-  apachepinot/pinot:0.10.0 \
+  apachepinot/pinot:0.11.0 \
   AddTable -schemaFile /config/orders_enriched/schema.json \
            -tableConfigFile /config/orders_enriched/table.json \
            -controllerHost pinot-controller -exec
