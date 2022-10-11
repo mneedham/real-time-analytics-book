@@ -13,3 +13,8 @@ services:
     environment:
       - PINOT_SERVER
       - PINOT_PORT
+    networks:
+      - rta
+networks:
+  rta:
+    name: rta
