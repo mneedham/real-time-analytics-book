@@ -87,7 +87,6 @@ def create_new_order():
         "id": str(uuid.uuid4()),
         "createdAt": datetime.datetime.now().isoformat(),
         "userId": user,
-        "status": "PLACED_ORDER",
         "price": total_price,
         "items": items              
     }
@@ -102,7 +101,7 @@ STATUSES = [
 ]
 
 WAIT_RANGES = {
-    "ORDER_CONFIRMED": (5, 20),
+    "ORDER_CONFIRMED": (60, 300),
     "BEING_PREPARED": (5, 20),
     "OUT_FOR_DELIVERY": (5, 20),
     "ARRIVING_AT_DOOR": (5, 20),
@@ -130,8 +129,8 @@ while True:
     # random.choices(range(0,100), range(0,100), k=100)
 
     # process other statuses
-    for index in range(1, len(STATUSES)):
-        last_status_time = placed_order_time
+    last_status_time = placed_order_time
+    for index in range(1, len(STATUSES)):        
         status = STATUSES[index]
         min, max = WAIT_RANGES[status]
         next_status_time = last_status_time + datetime.timedelta(seconds=random.randint(min, max))

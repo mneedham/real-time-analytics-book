@@ -5,7 +5,6 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import pizzashop.deser.JsonDeserializer;
 import pizzashop.deser.JsonSerializer;
@@ -14,18 +13,20 @@ import pizzashop.models.*;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
-public class TopologyProducer {
+public class Topology {
     @Produces
-    public Topology buildTopology() {
-        String ordersTopic = System.getenv().getOrDefault("ORDERS_TOPIC",  "orders-multi9");
-        String productsTopic = System.getenv().getOrDefault("PRODUCTS_TOPIC",  "products-multi9");
-        String enrichedOrdersTopic = System.getenv().getOrDefault("ENRICHED_ORDERS_TOPIC",  "enriched-orders-multi10");
+    public org.apache.kafka.streams.Topology buildTopology() {
+        String orderStatusesTopic = System.getenv().getOrDefault("ORDER_STATUSES_TOPIC",  "ordersStatuses");
+        String ordersTopic = System.getenv().getOrDefault("ORDERS_TOPIC",  "orders");
+        String productsTopic = System.getenv().getOrDefault("PRODUCTS_TOPIC",  "products");
+        String enrichedOrderItemsTopic = System.getenv().getOrDefault("ENRICHED_ORDER_ITEMS_TOPIC",  "enriched-order-items");
+        String enrichedOrdersTopic = System.getenv().getOrDefault("ENRICHED_ORDERS_TOPIC",  "enriched-orders");
 
         final Serde<Order> orderSerde = Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(Order.class));
         OrderItemWithContextSerde orderItemWithContextSerde = new OrderItemWithContextSerde();
@@ -33,15 +34,17 @@ public class TopologyProducer {
                 new JsonDeserializer<>(Product.class));
         final Serde<HydratedOrderItem> hydratedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(HydratedOrderItem.class));
-        final Serde<HydratedOrder> hydratedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(HydratedOrder.class));
-        final Serde<CompleteOrder> completeOrderSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(CompleteOrder.class));
+        final Serde<EnrichedOrder> enrichedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
+                new JsonDeserializer<>(EnrichedOrder.class));
+        final Serde<OrderStatus> orderStatusSerde = Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(OrderStatus.class));
+
 
         StreamsBuilder builder = new StreamsBuilder();
 
         KStream<String, Order> orders = builder.stream(ordersTopic, Consumed.with(Serdes.String(), orderSerde));
         KTable<String, Product> products = builder.table(productsTopic, Consumed.with(Serdes.String(), productSerde));
+        KStream<String, OrderStatus> orderStatuses = builder.stream(orderStatusesTopic, Consumed.with(Serdes.String(), orderStatusSerde));
+
 
         KStream<String, OrderItemWithContext> orderItems = orders.flatMap((key, value) -> {
             List<KeyValue<String, OrderItemWithContext>> result = new ArrayList<>();
@@ -63,7 +66,21 @@ public class TopologyProducer {
                     hydratedOrderItem.product = product;
                     return hydratedOrderItem;
                 }, Joined.with(Serdes.String(), orderItemWithContextSerde, productSerde))
-                .to(enrichedOrdersTopic, Produced.with(Serdes.String(), hydratedOrderItemsSerde));
+                .to(enrichedOrderItemsTopic, Produced.with(Serdes.String(), hydratedOrderItemsSerde));
+
+        orders.join(orderStatuses, (value1, value2) -> {
+                    EnrichedOrder enrichedOrder = new EnrichedOrder();
+                    enrichedOrder.id = value1.id;
+                    enrichedOrder.items = value1.items;
+                    enrichedOrder.userId = value1.userId;
+                    enrichedOrder.status = value2.status;
+                    enrichedOrder.createdAt = value2.updatedAt;
+                    enrichedOrder.price = value1.price;
+                    return enrichedOrder;
+                },
+                JoinWindows.ofTimeDifferenceAndGrace(Duration.ofHours(2), Duration.ofHours(4)),
+                StreamJoined.with(Serdes.String(), orderSerde, orderStatusSerde)
+        ).to(enrichedOrdersTopic, Produced.with(Serdes.String(), enrichedOrdersSerde));
 
         final Properties props = new Properties();
 

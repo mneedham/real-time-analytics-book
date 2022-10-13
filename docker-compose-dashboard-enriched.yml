@@ -23,7 +23,7 @@ services:
       - QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS=kafka:9092
       - ORDERS_TOPIC=orders
       - PRODUCTS_TOPIC=products
-      - ENRICHED_ORDERS_TOPIC=enriched-order-items
+      - ENRICHED_ORDER_ITEMS_TOPIC=enriched-order-items
     depends_on:
       - kafka
     networks:
