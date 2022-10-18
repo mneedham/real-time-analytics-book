@@ -18,6 +18,15 @@
  */
 
  declare module 'Models' {
+    export type Order = {
+      statuses: Array<OrderStatus>
+    }
+
+    export type OrderStatus = {
+      status: String
+      timestamp: String
+    }
+
     export type ResultPane = {
       tableData: TableData, 
       queryInProgress?: boolean

@@ -9,6 +9,9 @@
         "schemaName": "orders_enriched",
         "replicasPerPartition": "1"
     },
+    "upsertConfig": {
+        "mode": "FULL"
+    },
     "tenants": {},
     "tableIndexConfig": {
         "loadMode": "MMAP",

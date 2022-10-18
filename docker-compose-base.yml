@@ -59,6 +59,19 @@ services:
       - KAFKA_BROKER_PORT=9092
     networks:
       - rta
+  orders-service-api:
+    build: orders-service-api
+    restart: unless-stopped
+    container_name: orders-service-api
+    ports:
+      - "5000:5000"
+    depends_on:
+      - pinot-controller
+    environment:
+      - PINOT_SERVER
+      - PINOT_PORT
+    networks:
+      - rta
 networks:
   rta:
     name: rta
