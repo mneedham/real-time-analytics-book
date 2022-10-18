@@ -22,6 +22,16 @@
       statuses: Array<OrderStatus>
     }
 
+    export type User = {
+      userId: String
+    }
+
+    export type OrderSummary = {
+      id: String,
+      price: number,
+      createdAt: String
+    }
+
     export type OrderStatus = {
       status: String
       timestamp: String

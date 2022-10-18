@@ -10,12 +10,13 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import PinotMethodUtils from '../src/pinot/PinotMethodUtils';
-import { Order, ResultPane, TableData, User } from 'Models';
-import { Autocomplete, Divider, TextField } from '@mui/material';
+import { Order, OrderSummary, ResultPane, TableData } from 'Models';
+
+import { useRouter } from 'next/router'
+import Link from 'next/link'
 
 import axios from 'axios';
-import Link from 'next/link';
+
 
 const ButtonAppBar = () => {
   return (
@@ -44,17 +45,24 @@ const ButtonAppBar = () => {
 const mdTheme = createTheme();
 
 export default function Home() {
-  const [users, setUsers] = useState<Array<User>>()
+  const router = useRouter()
+  const { userId } = router.query
+
+  const [orders, setOrders] = useState<Array<Order>>()
 
   useEffect(() => {
-    getUsers(setUsers)
-  }, [])
+    if(userId !== undefined) {
+      getOrders(setOrders)
+    }
+    
+  }, [userId])
 
-  const getUsers = async (fn: (users:Array<User>) => void) => {
-    const res = await axios(`http://localhost:5000/users`)
+  const getOrders = async (fn: (orders:Array<OrderSummary>) => void) => {
+    const res = await axios(`http://localhost:5000/users/${userId}/orders`)
     fn(res.data)
   }
 
+ 
   return (
     <ThemeProvider theme={mdTheme}>
       <ButtonAppBar />
@@ -69,29 +77,47 @@ export default function Home() {
       >
         <Container>
 
+      
+
           <Typography variant="h4" component="h1" gutterBottom>
-            Users
+            Orders for user {userId}
           </Typography>
 
+          <Button
+            className="ml-0 pl-0"
+            onClick={() => {
+              getOrders(setOrders)
+            }}>
+            Refresh Orders
+          </Button>
+
+
           <div>
-            {users && users.map(row => (
-              <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex justify-between" }>
-                <div className="w-48 font-bold text-lg">{row.userId}</div>
-                <div>
-                <Link href={`/users/${row.userId}`} className="ml-0 pl-0">
+            {orders && orders.map(row => (
+              <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex justify-between"}>
+                <div className=" flex justify-between w-3/4">
+                  <div className="font-bold w-72">{row.ts}</div>
+                  <div className="w-96  font-semibold">{row.id}</div>
+                  <div className="w-32">{row.price}₹</div>
+                </div>
+                <div className="">
+                 
+
+                  <Link href={`/orders/${row.id}`} className="ml-0 pl-0">
                   <Button
                     className="ml-0 pl-0"
                     >
-                    View User
+                    View Order
                   </Button>
                 </Link>
+
                 </div>
 
               </div>
             ))}
 
-            {(!users || users.length == 0) && <div>
-              No users found
+            {(!orders || orders.length == 0) && <div>
+              No orders found for user
             </div>}
 
           </div>

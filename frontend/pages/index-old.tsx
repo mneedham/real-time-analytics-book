@@ -12,13 +12,9 @@ import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import { styled, createTheme, ThemeProvider } from '@mui/material/styles';
 import PinotMethodUtils from '../src/pinot/PinotMethodUtils';
-import { Order, ResultPane, TableData } from 'Models';
+import { ResultPane, TableData } from 'Models';
 import { Autocomplete, Divider, TextField } from '@mui/material';
 import { InputTwoTone } from '@mui/icons-material';
-
-
-import axios from 'axios';
-
 
 const ButtonAppBar = () => {
   return (
@@ -50,19 +46,18 @@ export default function Home() {
   const [resultData, setResultData] = useState<TableData>();
   const [orderIds, setOrderIds] = useState<Array<String>>()
 
-  const [order, setOrder] = useState<Order>()
-
   const [selectedOrderId, setSelectedOrderId] = useState<String>();
 
   const updateOrder = () => {
-    getOrder(setOrder)  
+    executeQuery(
+      `select * 
+       FROM orders_enriched 
+       WHERE id='${selectedOrderId}' 
+       ORDER BY ts DESC
+       option(skipUpsert=true)`, 
+       setResultData
+       )      
   }
-
-  const getOrder = async (fn: (order:Order) => void) => {
-    const res = await axios(`http://localhost:5000/orders/${selectedOrderId}`)
-    fn({statuses: res.data})
-  }
-
 
   const updateOrdersList = () => {
     executeQuery('select id FROM orders ORDER BY ts DESC LIMIT 50', (input => {
@@ -149,14 +144,14 @@ export default function Home() {
 
 
           <div>
-            {order && order.statuses.map(row => (
-              <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex" + (row.status === "DELIVERED" ? " bg-green-400" : "") }>
-                <div className="w-48">{row.timestamp}</div>
-                <div className="font-semibold">{row.status}</div>
+            {resultData && resultData.records.map(row => (
+              <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex" + (row[3] === "DELIVERED" ? " bg-green-400" : "") }>
+                <div className="w-48">{row[4]}</div>
+                <div className="font-semibold">{row[3]}</div>
               </div>
             ))}
 
-            {(!order || order.statuses.length == 0) && <div>
+            {(!resultData || resultData.records.length == 0) && <div>
               No statuses found for order
             </div>}
 
