@@ -45,7 +45,6 @@ public class Topology {
         KTable<String, Product> products = builder.table(productsTopic, Consumed.with(Serdes.String(), productSerde));
         KStream<String, OrderStatus> orderStatuses = builder.stream(orderStatusesTopic, Consumed.with(Serdes.String(), orderStatusSerde));
 
-
         KStream<String, OrderItemWithContext> orderItems = orders.flatMap((key, value) -> {
             List<KeyValue<String, OrderItemWithContext>> result = new ArrayList<>();
             for (OrderItem item : value.items) {

@@ -33,7 +33,7 @@ Once that's run, you can navigate to the following:
 
 ```
 docker run -v $PWD/pinot/config:/config \
-  --network real-time-analytics-book_default \
+  --network rta \
   apachepinot/pinot:0.11.0 \
   AddTable -schemaFile /config/orders_enriched/schema.json \
            -tableConfigFile /config/orders_enriched/table.json \

@@ -15,19 +15,6 @@ services:
       - PINOT_PORT
     networks:
       - rta
-  kafka-streams-quarkus:
-    build: kafka-streams-quarkus
-    restart: unless-stopped
-    container_name: kafka-streams-quarkus
-    environment:
-      - QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS=kafka:9092
-      - ORDERS_TOPIC=orders
-      - PRODUCTS_TOPIC=products
-      - ENRICHED_ORDER_ITEMS_TOPIC=enriched-order-items
-    depends_on:
-      - kafka
-    networks:
-      - rta
 networks:
   rta:
     name: rta

@@ -1,5 +1,6 @@
 {
     "schemaName": "orders_enriched",
+    "primaryKeyColumns": ["id"],
     "dimensionFieldSpecs": [
         {
             "name": "id",
