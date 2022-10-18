@@ -31,14 +31,40 @@ services:
       - pinot-broker
     networks:
       - rta
-  pinot-add-table:
+  pinot-add-table-orders:
     image: apachepinot/pinot:0.11.0-arm64
     container_name: "pinot-add-table"
     volumes:
       - ./pinot/config:/config
-    command: "'./bin/pinot-admin.sh AddTable -schemaFile /config/orders/schema.json -tableConfigFile /config/orders/table.json -controllerHost pinot-controller -exec && \
-               ./bin/pinot-admin.sh AddTable -schemaFile /config/order_items_enriched/schema.json -tableConfigFile /config/order_items_enriched/table.json -controllerHost pinot-controller -exec && \
-               ./bin/pinot-admin.sh AddTable -schemaFile /config/orders_enriched/schema.json -tableConfigFile /config/orders_enriched/table.json -controllerHost pinot-controller -exec'"
+    command: "AddTable -schemaFile /config/orders/schema.json -tableConfigFile /config/orders/table.json -controllerHost pinot-controller -exec"
+    restart: on-failure
+    entrypoint: "bash -c"
+    environment:
+    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
+    depends_on:
+      - pinot-controller
+    networks:
+      - rta
+  pinot-add-table-order-items-enriched:
+    image: apachepinot/pinot:0.11.0-arm64
+    container_name: "pinot-add-table"
+    volumes:
+      - ./pinot/config:/config
+    command: "AddTable -schemaFile /config/order_items_enriched/schema.json -tableConfigFile /config/order_items_enriched/table.json -controllerHost pinot-controller -exec"
+    restart: on-failure
+    entrypoint: "bash -c"
+    environment:
+    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
+    depends_on:
+      - pinot-controller
+    networks:
+      - rta
+  pinot-add-table-orders-enriched:
+    image: apachepinot/pinot:0.11.0-arm64
+    container_name: "pinot-add-table"
+    volumes:
+      - ./pinot/config:/config
+    command: "AddTable -schemaFile /config/orders_enriched/schema.json -tableConfigFile /config/orders_enriched/table.json -controllerHost pinot-controller -exec"
     restart: on-failure
     entrypoint: "bash -c"
     environment:

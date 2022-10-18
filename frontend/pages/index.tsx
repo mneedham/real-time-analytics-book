@@ -59,17 +59,22 @@ export default function Home() {
        )      
   }
 
+  const updateOrdersList = () => {
+    executeQuery('select id FROM orders ORDER BY ts DESC LIMIT 50', (input => {
+      setOrderIds(
+        input.records.map(row => row[0])
+      )
+    }))
+  }
+
+
   useEffect(() => {
     updateOrder()
   }, [selectedOrderId]);
 
 
   useEffect(() => {
-    executeQuery('select id FROM orders ORDER BY ts DESC LIMIT 50', (input => {
-      setOrderIds(
-        input.records.map(row => row[0])
-      )
-    }))
+    updateOrdersList()
   }, [])
 
   const executeQuery = async (query: string,fn: (input: TableData) => void) => {
@@ -101,6 +106,9 @@ export default function Home() {
         }}
       >
         <Container>
+
+          <div className="flex justify-between">
+
           <Autocomplete
             disablePortal
             id="combo-box-demo"
@@ -110,6 +118,17 @@ export default function Home() {
             onChange={(_, value) => setSelectedOrderId(value)}
             className="mb-4"
           />
+
+<Button
+            className="ml-0 pl-0"
+            onClick={() => {
+              updateOrdersList()
+            }}>
+            Refresh Orders
+          </Button>
+
+          </div>
+
 
           <Typography variant="h4" component="h1" gutterBottom>
             Order Status for {selectedOrderId}
@@ -126,7 +145,7 @@ export default function Home() {
 
           <div>
             {resultData && resultData.records.map(row => (
-              <div className="px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex">
+              <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex" + (row[3] === "DELIVERED" ? " bg-green-400" : "") }>
                 <div className="w-48">{row[4]}</div>
                 <div className="font-semibold">{row[3]}</div>
               </div>
