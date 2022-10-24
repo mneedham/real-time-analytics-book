@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS pizzashop.users
     first_name VARCHAR(255),
     last_name VARCHAR(255),
     email VARCHAR(255),
-    country VARCHAR(255),
+    residence VARCHAR(500),
+    lat DECIMAL(10, 8),
+    lon DECIMAL(10, 8),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -45,4 +47,4 @@ INTO TABLE pizzashop.users
 FIELDS TERMINATED BY ','
 OPTIONALLY ENCLOSED BY '"'
 IGNORE 1 LINES
-(first_name,last_name,email,country);
+(first_name,last_name,email,residence,lat,lon);
