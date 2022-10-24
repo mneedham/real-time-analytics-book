@@ -19,7 +19,16 @@
 
  declare module 'Models' {
     export type Order = {
-      statuses: Array<OrderStatus>
+      statuses: Array<OrderStatus>,
+      userId: String,
+      products: Array<Product>
+    }
+
+    export type Product = {
+      image: string,
+      price: number,
+      product: string,
+      quantity: number
     }
 
     export type User = {

@@ -4,65 +4,36 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
 import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { Order, OrderStatus, OrderSummary, ResultPane, TableData } from 'Models';
+import { Order, OrderStatus, OrderSummary } from 'Models';
 
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 
 import axios from 'axios';
 
-
-const ButtonAppBar = () => {
-  return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            All About That Dough
-          </Typography>
-          <Button color="inherit">Login</Button>
-        </Toolbar>
-      </AppBar>
-    </Box>
-  );
-}
-
+import { ButtonAppBar } from '../../src/ButtonAppBar';
+import Link from 'next/link';
 const mdTheme = createTheme();
 
 export default function Home() {
   const router = useRouter()
   const { orderId } = router.query
 
-  const [orders, setOrders] = useState<Array<OrderStatus>>()
+  const [order, setOrder] = useState<Order>()
 
   useEffect(() => {
-    if(orderId !== undefined) {
-      getOrders(setOrders)
+    if (orderId !== undefined) {
+      getOrder(setOrder)
     }
-    
+
   }, [orderId])
 
-  const getOrders = async (fn: (orders:Array<OrderSummary>) => void) => {
+  const getOrder = async (fn: (orders: Array<OrderSummary>) => void) => {
     const res = await axios(`http://localhost:5000/orders/${orderId}`)
     fn(res.data)
   }
 
- 
   return (
     <ThemeProvider theme={mdTheme}>
       <ButtonAppBar />
@@ -77,34 +48,72 @@ export default function Home() {
       >
         <Container>
 
-      
+          {order && <Link href={`/users/${order.userId}`}>
 
-          <Typography variant="h4" component="h1" gutterBottom>
-            Statuses for order {orderId}
+            <Button
+              className="ml-0 pl-0"
+              onClick={() => {
+                getOrder(setOrder)
+              }}>
+              🔙 to user {order.userId}
+            </Button>
+
+          </Link>}
+
+          <Typography variant="h4" component="h1" >
+            Order {orderId}
           </Typography>
 
+
+          <div className="mt-2">
+            <div className="flex justify-between">
+            <Typography variant="h5" component="h1">Status</Typography>
           <Button
             className="ml-0 pl-0"
             onClick={() => {
-              getOrders(setOrders)
+              getOrder(setOrder)
             }}>
-            Refresh Orders
+            Refresh Status
           </Button>
 
+            </div>
+          
 
-          <div>
-            {orders && orders.map(row => (
-                 <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex" + (row.status === "DELIVERED" ? " bg-green-400" : "") }>
-                 <div className="w-48">{row.timestamp}</div>
-                 <div className="font-semibold">{row.status}</div>
-               </div>
+            {order && order.statuses.map(row => (
+              <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex" + (row.status === "DELIVERED" ? " bg-green-400" : "")}>
+                <div className="w-48">{row.timestamp}</div>
+                <div className="font-semibold">{row.status}</div>
+              </div>
             ))}
 
-            {(!orders || orders.length == 0) && <div>
-              No orders found for user
+            {(!order || order.statuses.length == 0) && <div>
+              No statuses found for order
             </div>}
 
           </div>
+
+          <Typography variant="h5" component="h1">Items</Typography>
+          <div className="px-2 py-4 border-2 border-sky-600 my-5 rounded-lg flex">
+            
+            <ul>
+              {order?.products.map(product => (
+                <li>
+                  <div className="flex py-2 h-20">
+                    <div className="items-center">
+                      <img src={product.image} width="75px" />
+                    </div>
+                    <div className="flex ml-2 items-center">
+                      <div className="w-64 align-baseline">{product.product}</div>
+                      <div>{product.quantity} x {product.price}</div>
+
+                    </div>
+
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
         </Container>
       </Box>
     </ThemeProvider>
