@@ -3,7 +3,8 @@
     "dimensionFieldSpecs": [
       {"name": "id", "dataType": "STRING"},
       {"name": "userId", "dataType": "INT"},
-      {"name": "status", "dataType": "STRING"},
+      {"name": "deliveryLat", "dataType": "DOUBLE"},
+      {"name": "deliveryLon", "dataType": "DOUBLE"},
       {"name": "items", "dataType": "JSON"}
     ],
     "metricFieldSpecs": [

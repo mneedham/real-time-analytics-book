@@ -16,6 +16,10 @@ import { ButtonAppBar } from '../../src/ButtonAppBar';
 import Link from 'next/link';
 const mdTheme = createTheme();
 
+import dynamic from "next/dynamic";
+
+const DEFAULT_CENTER = [38.907132, -77.036546]  
+
 export default function Home() {
   const router = useRouter()
   const { orderId } = router.query
@@ -29,7 +33,12 @@ export default function Home() {
 
   }, [orderId])
 
-  const getOrder = async (fn: (orders: Array<OrderSummary>) => void) => {
+  const MapWithNoSSR = dynamic(() => import("../../src/components/Map"), {
+    ssr: false,
+  });
+
+
+  const getOrder = async (fn: (orders: Order) => void) => {
     const res = await axios(`http://localhost:5000/orders/${orderId}`)
     fn(res.data)
   }
@@ -67,17 +76,17 @@ export default function Home() {
 
           <div className="mt-2">
             <div className="flex justify-between">
-            <Typography variant="h5" component="h1">Status</Typography>
-          <Button
-            className="ml-0 pl-0"
-            onClick={() => {
-              getOrder(setOrder)
-            }}>
-            Refresh Status
-          </Button>
+              <Typography variant="h5" component="h1">Status</Typography>
+              <Button
+                className="ml-0 pl-0"
+                onClick={() => {
+                  getOrder(setOrder)
+                }}>
+                Refresh Status
+              </Button>
 
             </div>
-          
+
 
             {order && order.statuses.map(row => (
               <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex" + (row.status === "DELIVERED" ? " bg-green-400" : "")}>
@@ -92,9 +101,20 @@ export default function Home() {
 
           </div>
 
+          <Typography variant="h5" component="h1">Map</Typography>
+          <div>
+            <MapWithNoSSR 
+              deliveryLocation={[order?.deliveryLat, order?.deliveryLon]}
+              currentLocation={[order?.deliveryStatus?.deliveryLat, order?.deliveryStatus?.deliveryLon]}
+            >
+
+            </MapWithNoSSR>
+
+          </div>
+
           <Typography variant="h5" component="h1">Items</Typography>
           <div className="px-2 py-4 border-2 border-sky-600 my-5 rounded-lg flex">
-            
+
             <ul>
               {order?.products.map(product => (
                 <li>

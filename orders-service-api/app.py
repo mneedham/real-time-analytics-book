@@ -10,6 +10,8 @@ conn = connect(pinot_host, pinot_port)
 app = Flask(__name__)
 CORS(app)
 
+curs = conn.cursor()
+
 @app.route('/users')
 def users():
     query = """
@@ -18,16 +20,12 @@ def users():
     LIMIT 50
     """
 
-    curs = conn.cursor()
-
     curs.execute(query)
 
     response = [
         {"userId": row[0]}
         for row in curs
     ]
-
-    curs.close()
 
     return response
 
@@ -40,8 +38,6 @@ def users_orders(user_id):
     LIMIT 50
     """
 
-    curs = conn.cursor()
-
     curs.execute(query, {"userId": user_id})
 
     response = [
@@ -49,24 +45,37 @@ def users_orders(user_id):
         for row in curs
     ]
 
-    curs.close()
-
     return response
 
 @app.route('/orders/<order_id>')
 def orders(order_id):
-    curs = conn.cursor()
-
     query = """
-    select userId
-    FROM orders_enriched
+    select userId, deliveryLat, deliveryLon
+    FROM orders
     WHERE id = %(orderId)s
     LIMIT 1
     """
 
     curs.execute(query, {"orderId": order_id})
 
-    user_ids = [row[0] for row in curs]
+    order_metadata = [
+        {"userId": row[0], "deliveryLat": row[1], "deliveryLon": row[2]}
+        for row in curs
+    ]
+
+    query = """
+    select deliveryLat, deliveryLon, ToDateTime(ts, 'YYYY-MM-dd HH:mm:ss') AS ts
+    from deliveryStatuses 
+    WHERE id = %(orderId)s
+    LIMIT 1
+    """
+
+    curs.execute(query, {"orderId": order_id})
+
+    delivery_status = [
+        {"deliveryLat": row[0], "deliveryLon": row[1], "ts": row[2]}
+        for row in curs
+    ]
 
     query = """
     select "product.name" AS product, 
@@ -106,13 +115,19 @@ def orders(order_id):
         for row in curs
     ]
 
-    curs.close()
-
-    return {
-        "userId": user_ids[0] if len(user_ids) > 0 else "",
+    response = {
+        "userId": order_metadata[0]["userId"] if len(order_metadata) > 0 else "",
+        "deliveryLat": order_metadata[0]["deliveryLat"] if len(order_metadata) > 0 else "",
+        "deliveryLon": order_metadata[0]["deliveryLon"] if len(order_metadata) > 0 else "",        
         "statuses": statuses,
         "products": products
     }
+
+    print("delivery_status", delivery_status)
+    if len(delivery_status) > 0:
+        response["deliveryStatus"] = delivery_status[0]
+
+    return response
 
 
 if __name__ == "__main__":

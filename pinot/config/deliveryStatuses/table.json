@@ -1,0 +1,48 @@
+{
+    "tableName": "deliveryStatuses",
+    "tableType": "REALTIME",
+    "segmentsConfig": {
+        "timeColumnName": "ts",
+        "timeType": "MILLISECONDS",
+        "retentionTimeUnit": "DAYS",
+        "retentionTimeValue": "1",
+        "schemaName": "deliveryStatuses",
+        "replicasPerPartition": "1"
+    },
+    "tenants": {},
+    "upsertConfig": {
+        "mode": "FULL"
+    },
+    "tableIndexConfig": {
+        "loadMode": "MMAP",
+        "streamConfigs": {
+            "streamType": "kafka",
+            "stream.kafka.consumer.type": "lowLevel",
+            "stream.kafka.topic.name": "deliveryStatuses",
+            "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
+            "stream.kafka.consumer.factory.class.name": "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory", 
+            "stream.kafka.broker.list": "kafka:9092",
+            "stream.kafka.consumer.prop.auto.offset.reset": "smallest"
+        }
+    },
+    "ingestionConfig": {
+        "complexTypeConfig": {
+            "delimeter": ".",
+            "fieldsToUnnest": [
+                "items"
+              ]
+        },
+        "transformConfigs": [
+            {
+                "columnName": "ts",
+                "transformFunction": "FromDateTime(\"updatedAt\", 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS')"
+            }
+        ]
+    },
+    "metadata": {
+        "customConfigs": {}
+    },
+    "routing": {
+        "instanceSelectorType": "strictReplicaGroup"
+    }
+}

@@ -11,6 +11,9 @@ import os
 from dateutil import parser
 from sortedcontainers import SortedList
 
+from pyproj import Geod
+import geopy.distance
+
 # CONFIG
 usersLimit         = 1000
 orderInterval      = 100
@@ -53,8 +56,9 @@ try:
                 producer.send('products', product, product["id"].encode("UTF-8"))
             producer.flush()
 
-            cursor.execute("SELECT id FROM pizzashop.users")
-            users = [row[0] for row in cursor]
+            cursor.execute("SELECT id,lat,lon FROM pizzashop.users")
+            users = {row[0]: (row[1], row[2]) for row in cursor}
+            user_ids = list(users.keys())
 
             print("Getting product ID and PRICE as tuples...")
             cursor.execute("SELECT id, price FROM pizzashop.products")
@@ -71,8 +75,7 @@ def create_new_order():
 
     items = []
     for _ in range(0, number_of_items):
-        product = random.choice(product_prices)
-        user = random.choice(users)
+        product = random.choice(product_prices)        
         purchase_quantity = random.randint(1,5)
         items.append({
             "productId": str(product[0]),
@@ -80,35 +83,42 @@ def create_new_order():
             "price": product[1]
         })
 
+    user_id = random.choice(user_ids)
     prices = [item["quantity"] * item["price"] for item in items]
     total_price = round(math.fsum(prices), 2)
 
     return {
         "id": str(uuid.uuid4()),
         "createdAt": datetime.datetime.now().isoformat(),
-        "userId": user,
+        "userId": user_id,
         "price": total_price,
-        "items": items              
+        "items": items,
+        "deliveryLat": str(users[user_id][0]),
+        "deliveryLon": str(users[user_id][1])
     }
 
 STATUSES = [
-    "PLACED_ORDER",
+    # PLACED_ORDER
     "ORDER_CONFIRMED",
     "BEING_PREPARED",
-    "OUT_FOR_DELIVERY",
-    "ARRIVING_AT_DOOR",
-    "DELIVERED"
+    "BEING_COOKED",
+    "OUT_FOR_DELIVERY"
+    # DELIVERED
 ]
 
 WAIT_RANGES = {
     "ORDER_CONFIRMED": (60, 300),
-    "BEING_PREPARED": (180, 200),
-    "OUT_FOR_DELIVERY": (5, 20),
-    "ARRIVING_AT_DOOR": (5, 20),
-    "DELIVERED": (5, 20)
+    "BEING_PREPARED": (30, 120),
+    "BEING_COOKED": (120, 180),
+    "OUT_FOR_DELIVERY": (180,600)
 }
 
 other_statuses = SortedList(key=lambda x: x["updatedAt"])
+delivery_statuses = SortedList(key=lambda x: x["updatedAt"])
+
+shop_location = (12.978268132410502, 77.59408889388118)
+driver_km_per_hour = 150
+geoid = Geod(ellps="WGS84")
 
 while True:
     order = create_new_order()
@@ -130,9 +140,10 @@ while True:
 
     # process other statuses
     last_status_time = placed_order_time
-    for index in range(1, len(STATUSES)):        
+    for index in range(0, len(STATUSES)):
         status = STATUSES[index]
-        min, max = WAIT_RANGES[status]
+        # min, max = WAIT_RANGES[status]
+        min, max = tuple([item/10 for item in WAIT_RANGES[status]])
         next_status_time = last_status_time + datetime.timedelta(seconds=random.randint(min, max))
 
         other_statuses.add({
@@ -141,15 +152,62 @@ while True:
             "status": status
         })
         last_status_time = next_status_time
+    
+    delivery_location = users[order["userId"]]
+    dist = geopy.distance.distance(shop_location, delivery_location).meters
+    minutes_to_deliver = (dist / (driver_km_per_hour * 1000)) * 60
+
+    next_status_time = last_status_time + datetime.timedelta(seconds=minutes_to_deliver*60)
+    other_statuses.add({
+        "id": order["id"],
+        "updatedAt": next_status_time.isoformat(),
+        "status": "DELIVERED"
+    })
+
+    delivery_statuses.add({
+        "id": order["id"],
+        "updatedAt": last_status_time.isoformat(),
+        "deliveryLat": str(shop_location[0]),
+        "deliveryLon": str(shop_location[1])
+    })
+
+    points_to_generate = minutes_to_deliver * 12
+    if points_to_generate > 0:
+        extra_points = geoid.npts(shop_location[0], shop_location[1], delivery_location[0], delivery_location[1], points_to_generate)
+        for point in extra_points:    
+            next_status_time = last_status_time + datetime.timedelta(seconds=5)
+
+            delivery_statuses.add({
+                "id": order["id"],
+                "updatedAt": next_status_time.isoformat(),
+                "deliveryLat": str(point[0]),
+                "deliveryLon": str(point[1])
+            })
+            last_status_time = next_status_time
+
+    delivery_statuses.add({
+        "id": order["id"],
+        "updatedAt": (last_status_time + datetime.timedelta(seconds=5)).isoformat(),
+        "deliveryLat": str(delivery_location[0]),
+        "deliveryLon": str(delivery_location[1])
+    })
+
 
     other_statuses_to_publish = [item for item in other_statuses if parser.parse(item["updatedAt"]) < datetime.datetime.now()]
 
     for status in other_statuses_to_publish:
         producer.send('ordersStatuses', status, bytes(status["id"].encode("UTF-8")))
-        other_statuses.remove(status)        
+        other_statuses.remove(status)
+
+    deliveries_to_publish = [item for item in delivery_statuses if parser.parse(item["updatedAt"]) < datetime.datetime.now()]
+
+    for status in deliveries_to_publish:
+        producer.send('deliveryStatuses', status, bytes(status["id"].encode("UTF-8")))
+        delivery_statuses.remove(status)       
+
 
     events_processed += 1
-    events_processed + len(other_statuses_to_publish)
+    events_processed + len(other_statuses_to_publish) + len(deliveries_to_publish)
     if events_processed % 100 == 0:
         print(f"{str(datetime.datetime.now())} Flushing after {events_processed} events")
         producer.flush()

@@ -21,7 +21,16 @@
     export type Order = {
       statuses: Array<OrderStatus>,
       userId: String,
-      products: Array<Product>
+      deliveryLat: number,
+      deliveryLon: number,
+      products: Array<Product>,
+      deliveryStatus?: DeliveryStatus
+    }
+
+    export type DeliveryStatus = {
+      deliveryLat: number,
+      deliveryLon: number,
+      ts: String
     }
 
     export type Product = {

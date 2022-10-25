@@ -13,6 +13,9 @@ public class Order {
 
     public double price;
 
+    public double deliveryLat;
+    public double deliveryLon;
+
     public List<OrderItem> items;
 
 //    public int productId;

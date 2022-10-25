@@ -1,0 +1,26 @@
+{
+    "schemaName": "deliveryStatuses",
+    "primaryKeyColumns": ["id"],
+    "dimensionFieldSpecs": [
+        {
+            "name": "id",
+            "dataType": "STRING"
+        },
+        {
+            "name": "deliveryLat",
+            "dataType": "DOUBLE"
+        },
+        {
+            "name": "deliveryLon",
+            "dataType": "DOUBLE"
+        }
+    ],
+    "dateTimeFieldSpecs": [
+        {
+            "name": "ts",
+            "dataType": "TIMESTAMP",
+            "format": "1:MILLISECONDS:EPOCH",
+            "granularity": "1:MILLISECONDS"
+        }
+    ]
+}
