@@ -69,27 +69,34 @@ export default function Home() {
 
           </Link>}
 
-          <Typography variant="h4" component="h1" >
-            Order {orderId}
-          </Typography>
+          <div className="flex justify-between">
+            <Typography variant="h4" component="h1" >
+              Order {orderId}
+            </Typography>
+            <Button
+                className="ml-0 pl-0"
+                onClick={() => {
+                  getOrder(setOrder)
+                }}>
+                Refresh
+              </Button>
+          </div>
+
+          <div>
+            Last Update: {new Date().toUTCString()}
+          </div>
 
 
           <div className="mt-2">
             <div className="flex justify-between">
               <Typography variant="h5" component="h1">Status</Typography>
-              <Button
-                className="ml-0 pl-0"
-                onClick={() => {
-                  getOrder(setOrder)
-                }}>
-                Refresh Status
-              </Button>
+             
 
             </div>
 
 
             {order && order.statuses.map(row => (
-              <div className={"px-2 py-5 border-2 border-indigo-200 my-5 rounded-lg flex" + (row.status === "DELIVERED" ? " bg-green-400" : "")}>
+              <div className={"px-2 py-5 border-2 border-indigo-200 mb-5 rounded-lg flex" + (row.status === "DELIVERED" ? " bg-green-400" : "")}>
                 <div className="w-48">{row.timestamp}</div>
                 <div className="font-semibold">{row.status}</div>
               </div>
@@ -101,11 +108,12 @@ export default function Home() {
 
           </div>
 
-          <Typography variant="h5" component="h1">Map</Typography>
-          <div>
+          <Typography variant="h5" component="h1" className="mb-2">Map</Typography>
+          <div className="mb-2" >
             <MapWithNoSSR 
               deliveryLocation={[order?.deliveryLat, order?.deliveryLon]}
               currentLocation={[order?.deliveryStatus?.deliveryLat, order?.deliveryStatus?.deliveryLon]}
+              timestamp={order?.deliveryStatus?.ts}
             >
 
             </MapWithNoSSR>
@@ -113,7 +121,7 @@ export default function Home() {
           </div>
 
           <Typography variant="h5" component="h1">Items</Typography>
-          <div className="px-2 py-4 border-2 border-sky-600 my-5 rounded-lg flex">
+          <div className="px-2 py-4 border-2 border-sky-600 my-5 mt-1 rounded-lg flex">
 
             <ul>
               {order?.products.map(product => (

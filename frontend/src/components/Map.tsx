@@ -12,13 +12,14 @@ import "leaflet-defaulticon-compatibility";
 
 import L from 'leaflet';
 
-import icon2 from '../../public/images/pizza-bike.svg'
+import icon2 from '../../public/images/noun-pizza-delivery-4649332-FF001C.svg'
 
 const Map = ({
-    deliveryLocation, currentLocation
+    deliveryLocation, currentLocation, timestamp
 }: {
     deliveryLocation: [number, number];
     currentLocation: [number, number];
+    timestamp: string;
 }) => {
 
     const myCustomColour = 'red'
@@ -57,15 +58,18 @@ const Map = ({
         <MapContainer center={[12.978268132410502, 77.59408889388118]} zoom={12} scrollWheelZoom={true} style={{ height: '50vh', width: '50wh' }}>
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
             />
             {deliveryLocation[0] !== undefined && <Marker position={deliveryLocation}>
-                <Popup>Delivery Location</Popup>
+                <Popup>
+                    Delivery Location <br />
+                    ({deliveryLocation[0]}, {deliveryLocation[1]}
+                    </Popup>
             </Marker>}
             {currentLocation[0] !== undefined && <Marker
                 position={currentLocation}
                 icon={icon}>
-                <Popup>Current Location</Popup>
+                <Popup>Current Location <br />({currentLocation[0]}, {currentLocation[1]})<br/> {timestamp}</Popup>
             </Marker>}
         </MapContainer>
 
