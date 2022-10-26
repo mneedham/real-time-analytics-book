@@ -17,6 +17,8 @@ import Link from 'next/link';
 const mdTheme = createTheme();
 
 import dynamic from "next/dynamic";
+import { Checkbox, FormControlLabel, Slider, Stack } from '@mui/material';
+import { ArrowCircleUp, ArrowCircleDown } from '@mui/icons-material';
 
 const DEFAULT_CENTER = [38.907132, -77.036546]  
 
@@ -26,12 +28,23 @@ export default function Home() {
 
   const [order, setOrder] = useState<Order>()
 
+  const [value, setValue] = React.useState<number>(10);
+
+  const handleChange = (event: Event, newValue: number | number[]) => {
+    setValue(newValue as number);
+  };
+
+
   useEffect(() => {
+    console.log(value)
     if (orderId !== undefined) {
       getOrder(setOrder)
+      const interval = setInterval(() => getOrder(setOrder), value*1000)
+      return () => clearInterval(interval)
+
     }
 
-  }, [orderId])
+  }, [orderId, value])
 
   const MapWithNoSSR = dynamic(() => import("../../src/components/Map"), {
     ssr: false,
@@ -70,9 +83,16 @@ export default function Home() {
           </Link>}
 
           <div className="flex justify-between">
+            <div>
             <Typography variant="h4" component="h1" >
               Order {orderId}
             </Typography>
+            <div>
+            Last Update: {new Date().toUTCString()}
+          </div>
+            </div>
+            <div className="flex flex-col">
+            <Box sx={{ width: 200 }}>
             <Button
                 className="ml-0 pl-0"
                 onClick={() => {
@@ -80,10 +100,14 @@ export default function Home() {
                 }}>
                 Refresh
               </Button>
-          </div>
-
-          <div>
-            Last Update: {new Date().toUTCString()}
+              <Stack spacing={2} direction="row" sx={{ mb: 1 }} alignItems="center">
+                <ArrowCircleDown className="m-0" />
+                <Slider aria-label="Refresh?" value={value} onChange={handleChange} max={30} min={1} />
+                <ArrowCircleUp className="m-0" />
+              </Stack>
+              </Box>
+            
+              </div>
           </div>
 
 

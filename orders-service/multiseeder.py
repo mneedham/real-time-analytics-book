@@ -12,6 +12,7 @@ from dateutil import parser
 from sortedcontainers import SortedList
 
 from pyproj import Geod
+import pyproj
 import geopy.distance
 
 # CONFIG
@@ -171,23 +172,26 @@ while True:
         "deliveryLon": str(shop_location[1])
     })
 
-    points_to_generate = minutes_to_deliver * 12
+    points_to_generate = minutes_to_deliver * 60
     if points_to_generate > 0:
-        extra_points = geoid.npts(shop_location[0], shop_location[1], delivery_location[0], delivery_location[1], points_to_generate)
-        for point in extra_points:    
-            next_status_time = last_status_time + datetime.timedelta(seconds=5)
+        try:
+            extra_points = geoid.npts(shop_location[0], shop_location[1], delivery_location[0], delivery_location[1], points_to_generate)
+            for point in extra_points:    
+                next_status_time = last_status_time + datetime.timedelta(seconds=1)
 
-            delivery_statuses.add({
-                "id": order["id"],
-                "updatedAt": next_status_time.isoformat(),
-                "deliveryLat": str(point[0]),
-                "deliveryLon": str(point[1])
-            })
-            last_status_time = next_status_time
+                delivery_statuses.add({
+                    "id": order["id"],
+                    "updatedAt": next_status_time.isoformat(),
+                    "deliveryLat": str(point[0]),
+                    "deliveryLon": str(point[1])
+                })
+                last_status_time = next_status_time
+        except pyproj.exceptions.GeodError as e:
+            print(e)
 
     delivery_statuses.add({
         "id": order["id"],
-        "updatedAt": (last_status_time + datetime.timedelta(seconds=5)).isoformat(),
+        "updatedAt": (last_status_time + datetime.timedelta(seconds=1)).isoformat(),
         "deliveryLat": str(delivery_location[0]),
         "deliveryLon": str(delivery_location[1])
     })

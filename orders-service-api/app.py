@@ -15,8 +15,9 @@ curs = conn.cursor()
 @app.route('/users')
 def users():
     query = """
-    select DISTINCT userId AS userId
+    select userId, ts
     FROM orders
+    ORDER BY ts DESC
     LIMIT 50
     """
 
@@ -35,7 +36,8 @@ def users_orders(user_id):
     select id, price, ToDateTime(ts, 'YYYY-MM-dd HH:mm:ss') AS ts
     FROM orders_enriched
     WHERE userId = %(userId)s
-    LIMIT 50
+    ORDER BY ts DESC
+    LIMIT 50    
     """
 
     curs.execute(query, {"userId": user_id})
