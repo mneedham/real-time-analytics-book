@@ -13,14 +13,37 @@ import "leaflet-defaulticon-compatibility";
 import L from 'leaflet';
 
 import pizzaImage from '../../public/images/noun-pizza-delivery-249955-FF001C.svg'
+import { useEffect, useState } from "react";
+import { DeliveryStatus } from "Models";
+import axios from "axios";
+import React from "react";
 
 const Map = ({
-    deliveryLocation, currentLocation, timestamp
+    deliveryLocation,
+    orderId
 }: {
     deliveryLocation: [number, number];
-    currentLocation: [number, number];
-    timestamp: string;
+    orderId: string;
 }) => {
+
+    const [deliveryStatus, setDeliveryStatus] = useState<DeliveryStatus>()
+
+    const refreshValue = 1
+    
+    useEffect(() => {
+        if (orderId !== undefined) {
+            getDeliveryStatus(setDeliveryStatus)
+          const interval = setInterval(() => getDeliveryStatus(setDeliveryStatus), refreshValue*1000)
+          return () => clearInterval(interval)
+    
+        }
+    
+      }, [orderId, refreshValue])
+
+    const getDeliveryStatus = async (fn: (ds: DeliveryStatus) => void) => {
+    const res = await axios(`http://localhost:5000/orders/${orderId}`)
+    fn(res.data.deliveryStatus)
+    }
 
     const icon = new L.Icon({
         iconUrl: pizzaImage.src,
@@ -29,7 +52,8 @@ const Map = ({
         iconSize: [48,67.5],    
     });
 
-    const currentLoc = currentLocation[0] !== undefined ? currentLocation : [12.978268132410502, 77.59408889388118]
+    const currentLoc = deliveryStatus !== undefined ? [deliveryStatus.deliveryLat, deliveryStatus.deliveryLon] : [12.978268132410502, 77.59408889388118]
+    const timestamp = deliveryStatus !== undefined ? deliveryStatus.ts : ""
 
     return (
         <MapContainer id="map" center={[12.978268132410502, 77.59408889388118]} zoom={12} scrollWheelZoom={true} style={{ height: '50vh', width: '50wh' }}>

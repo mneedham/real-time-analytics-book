@@ -136,8 +136,7 @@ export default function Home() {
           <div className="mb-2" >
             <MapWithNoSSR 
               deliveryLocation={[order?.deliveryLat, order?.deliveryLon]}
-              currentLocation={[order?.deliveryStatus?.deliveryLat, order?.deliveryStatus?.deliveryLon]}
-              timestamp={order?.deliveryStatus?.ts}
+              orderId={orderId}
             >
 
             </MapWithNoSSR>

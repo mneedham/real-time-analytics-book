@@ -1,11 +1,15 @@
 package pizzashop.streams;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.StateStore;
+import org.apache.kafka.streams.state.KeyValueStore;
 import pizzashop.deser.JsonDeserializer;
 import pizzashop.deser.JsonSerializer;
 import pizzashop.deser.OrderItemWithContextSerde;
@@ -42,6 +46,10 @@ public class Topology {
         StreamsBuilder builder = new StreamsBuilder();
 
         KStream<String, Order> orders = builder.stream(ordersTopic, Consumed.with(Serdes.String(), orderSerde));
+
+        Materialized<String, Order, KeyValueStore<Bytes, byte[]>> ordersStore = Materialized.as("OrdersStore");
+        orders.toTable(ordersStore.withKeySerde(Serdes.String()).withValueSerde(orderSerde));
+
         KTable<String, Product> products = builder.table(productsTopic, Consumed.with(Serdes.String(), productSerde));
         KStream<String, OrderStatus> orderStatuses = builder.stream(orderStatusesTopic, Consumed.with(Serdes.String(), orderStatusSerde));
 
@@ -85,6 +93,7 @@ public class Topology {
 
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, OrderItemWithContextSerde.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         return builder.build(props);
     }
 }
