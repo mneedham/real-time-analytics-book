@@ -98,6 +98,11 @@ public class Topology {
                 .windowedBy(tumblingWindow)
                 .count(countsWindowStore);
 
+        Materialized<String, Double, WindowStore<Bytes, byte[]>> revenueWindowStore = Materialized.as("RevenueStore");
+        orders.groupBy((key, value) -> "count", Grouped.with(Serdes.String(), orderSerde))
+                .windowedBy(tumblingWindow)
+                .aggregate(() -> 0.0, (key, value, aggregate) -> aggregate + value.price, revenueWindowStore.withValueSerde(Serdes.Double()));
+
         final Properties props = new Properties();
 
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
