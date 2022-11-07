@@ -9,7 +9,7 @@ import org.jooq.impl.DSL;
 import pizzashop.models.OrdersSummary;
 import pizzashop.models.PinotOrdersSummary;
 import pizzashop.models.TimePeriod;
-import pizzashop.streams.InteractiveQueries;
+import pizzashop.streams.OrdersQueries;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -23,14 +23,21 @@ import static org.jooq.impl.DSL.*;
 @Path("/orders")
 public class OrdersResource {
     @Inject
-    InteractiveQueries interactiveQueries;
+    OrdersQueries ordersQueries;
 
     private Connection connection = ConnectionFactory.fromHostList("localhost:8099");
 
     @GET
     @Path("/overview")
     public Response overview() {
-        OrdersSummary ordersSummary = interactiveQueries.ordersSummary();
+        OrdersSummary ordersSummary = ordersQueries.ordersSummary();
+        return Response.ok(ordersSummary).build();
+    }
+
+    @GET
+    @Path("/overview3")
+    public Response overview3() {
+        PinotOrdersSummary ordersSummary = ordersQueries.ordersSummary2();
         return Response.ok(ordersSummary).build();
     }
 

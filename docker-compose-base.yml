@@ -65,8 +65,6 @@ services:
     container_name: orders-service-api
     ports:
       - "5000:5000"
-    depends_on:
-      - pinot-controller
     environment:
       - PINOT_SERVER
       - PINOT_PORT

@@ -10,6 +10,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.StateStore;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.WindowStore;
 import pizzashop.deser.JsonDeserializer;
 import pizzashop.deser.JsonSerializer;
 import pizzashop.deser.OrderItemWithContextSerde;
@@ -88,6 +89,14 @@ public class Topology {
                 JoinWindows.ofTimeDifferenceAndGrace(Duration.ofHours(2), Duration.ofHours(4)),
                 StreamJoined.with(Serdes.String(), orderSerde, orderStatusSerde)
         ).to(enrichedOrdersTopic, Produced.with(Serdes.String(), enrichedOrdersSerde));
+
+        Duration windowSize = Duration.ofSeconds(60);
+        TimeWindows tumblingWindow = TimeWindows.ofSizeWithNoGrace(windowSize);
+
+        Materialized<String, Long, WindowStore<Bytes, byte[]>> countsWindowStore = Materialized.as("OrdersCountStore");
+        orders.groupBy((key, value) -> "count", Grouped.with(Serdes.String(), orderSerde))
+                .windowedBy(tumblingWindow)
+                .count(countsWindowStore);
 
         final Properties props = new Properties();
 
