@@ -7,10 +7,7 @@ import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.state.*;
 import org.joda.time.DateTime;
 
-import pizzashop.models.Order;
-import pizzashop.models.OrdersSummary;
-import pizzashop.models.PinotOrdersSummary;
-import pizzashop.models.TimePeriod;
+import pizzashop.models.*;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -44,11 +41,11 @@ public class OrdersQueries {
         Instant oneMinuteAgo = now.minusSeconds(60);
         Instant twoMinutesAgo = now.minusSeconds(120);
 
-        long recentCount = getCount(countStore, now, oneMinuteAgo);
-        long previousCount = getCount(countStore, oneMinuteAgo, twoMinutesAgo);
+        long recentCount = getCount(countStore, oneMinuteAgo, now);
+        double recentRevenue = getRevenue(revenueStore, oneMinuteAgo, now);
 
-        double recentRevenue = getRevenue(revenueStore, now, oneMinuteAgo);
-        double previousRevenue = getRevenue(revenueStore, oneMinuteAgo, twoMinutesAgo);
+        long  previousCount = getCount(countStore, twoMinutesAgo, oneMinuteAgo);
+        double previousRevenue = getRevenue(revenueStore, twoMinutesAgo, oneMinuteAgo);
 
         TimePeriod currentTimePeriod = new TimePeriod(recentCount, recentRevenue);
         TimePeriod previousTimePeriod = new TimePeriod(previousCount, previousRevenue);
@@ -58,23 +55,22 @@ public class OrdersQueries {
 
     }
 
-    private static double getRevenue(ReadOnlyWindowStore<String, Double> revenue, Instant timeTo, Instant timeFrom) {
-        try (WindowStoreIterator<Double> iterator = revenue.backwardFetch("count", timeFrom, timeTo)) {
+    private static double getRevenue(ReadOnlyWindowStore<String, Double> revenue, Instant timeFrom, Instant timeTo) {
+        try (WindowStoreIterator<Double> iterator = revenue.fetch("count", timeFrom, timeTo)) {
             if (iterator.hasNext()) {
                 KeyValue<Long, Double> next = iterator.next();
-                long windowTimestamp = next.key;
-                System.out.println("Count of 'count' @ time " + windowTimestamp + " is " + next.value);
+                System.out.println("next.key = " + next.key + "-->" + next.value);
                 return next.value;
             }
         }
         return 0;
     }
-    private static long getCount(ReadOnlyWindowStore<String, Long> ordersCounts, Instant timeTo, Instant timeFrom) {
-        try (WindowStoreIterator<Long> iterator = ordersCounts.backwardFetch("count", timeFrom, timeTo)) {
+    private static long getCount(ReadOnlyWindowStore<String, Long> ordersCounts, Instant timeFrom, Instant timeTo) {
+        try (WindowStoreIterator<Long> iterator = ordersCounts.fetch("count", timeFrom, timeTo)) {
             if (iterator.hasNext()) {
                 KeyValue<Long, Long> next = iterator.next();
-                long windowTimestamp = next.key;
-                System.out.println("Count of 'count' @ time " + windowTimestamp + " is " + next.value);
+                System.out.println("next.key = " + next.key + "-->" + next.value);
+
                 return next.value;
             }
         }

@@ -91,17 +91,22 @@ public class Topology {
         ).to(enrichedOrdersTopic, Produced.with(Serdes.String(), enrichedOrdersSerde));
 
         Duration windowSize = Duration.ofSeconds(60);
-        TimeWindows tumblingWindow = TimeWindows.ofSizeWithNoGrace(windowSize);
+//        TimeWindows timeWindow = TimeWindows.ofSizeWithNoGrace(windowSize);
 
-        Materialized<String, Long, WindowStore<Bytes, byte[]>> countsWindowStore = Materialized.as("OrdersCountStore");
+        Duration advanceSize = Duration.ofSeconds(1);
+        Duration gracePeriod = Duration.ofSeconds(60);
+        TimeWindows timeWindow = TimeWindows.ofSizeAndGrace(windowSize, gracePeriod).advanceBy(advanceSize);
+        
         orders.groupBy((key, value) -> "count", Grouped.with(Serdes.String(), orderSerde))
-                .windowedBy(tumblingWindow)
-                .count(countsWindowStore);
+                .windowedBy(timeWindow)
+                .count(Materialized.as("OrdersCountStore"));
 
-        Materialized<String, Double, WindowStore<Bytes, byte[]>> revenueWindowStore = Materialized.as("RevenueStore");
         orders.groupBy((key, value) -> "count", Grouped.with(Serdes.String(), orderSerde))
-                .windowedBy(tumblingWindow)
-                .aggregate(() -> 0.0, (key, value, aggregate) -> aggregate + value.price, revenueWindowStore.withValueSerde(Serdes.Double()));
+                .windowedBy(timeWindow)
+                .aggregate(
+                        () -> 0.0, (key, value, aggregate) -> aggregate + value.price,
+                        Materialized.<String, Double, WindowStore<Bytes, byte[]>>as("RevenueStore")
+                                .withValueSerde(Serdes.Double()));
 
         final Properties props = new Properties();
 
