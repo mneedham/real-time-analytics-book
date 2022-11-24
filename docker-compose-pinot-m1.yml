@@ -57,32 +57,6 @@ services:
       - pinot-controller
     networks:
       - rta
-  pinot-add-table-orders-enriched:
-    image: apachepinot/pinot:0.11.0-arm64
-    container_name: "pinot-add-table-orders-enriched"
-    volumes:
-      - ./pinot/config:/config
-    command: "AddTable -schemaFile /config/orders_enriched/schema.json -tableConfigFile /config/orders_enriched/table.json -controllerHost pinot-controller -exec"
-    restart: on-failure
-    environment:
-    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
-    depends_on:
-      - pinot-controller
-    networks:
-      - rta
-  pinot-add-table-deliveryStatuses:
-    image: apachepinot/pinot:0.11.0-arm64
-    container_name: "pinot-add-table-deliveryStatuses"
-    volumes:
-      - ./pinot/config:/config
-    command: "AddTable -schemaFile /config/deliveryStatuses/schema.json -tableConfigFile /config/deliveryStatuses/table.json -controllerHost pinot-controller -exec"
-    restart: on-failure
-    environment:
-    - "JAVA_OPTS=-Dpinot.admin.system.exit=true"
-    depends_on:
-      - pinot-controller
-    networks:
-      - rta
 networks:
   rta:
     name: rta

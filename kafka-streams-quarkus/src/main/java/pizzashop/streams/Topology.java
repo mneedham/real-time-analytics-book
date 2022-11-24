@@ -96,7 +96,7 @@ public class Topology {
         Duration advanceSize = Duration.ofSeconds(1);
         Duration gracePeriod = Duration.ofSeconds(60);
         TimeWindows timeWindow = TimeWindows.ofSizeAndGrace(windowSize, gracePeriod).advanceBy(advanceSize);
-        
+
         orders.groupBy((key, value) -> "count", Grouped.with(Serdes.String(), orderSerde))
                 .windowedBy(timeWindow)
                 .count(Materialized.as("OrdersCountStore"));
@@ -105,7 +105,8 @@ public class Topology {
                 .windowedBy(timeWindow)
                 .aggregate(
                         () -> 0.0, (key, value, aggregate) -> aggregate + value.price,
-                        Materialized.<String, Double, WindowStore<Bytes, byte[]>>as("RevenueStore")
+                        Materialized
+                                .<String, Double, WindowStore<Bytes, byte[]>>as("RevenueStore")
                                 .withValueSerde(Serdes.Double()));
 
         final Properties props = new Properties();

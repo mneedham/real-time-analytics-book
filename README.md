@@ -19,6 +19,7 @@ docker-compose \
   -f docker-compose-base.yml \
   -f docker-compose-pinot-m1.yml \
   -f docker-compose-dashboard.yml \
+  -f docker-compose-enrich-streams.yml \
   -f docker-compose-dashboard-enriched.yml \
   up
 ```

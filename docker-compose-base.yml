@@ -16,6 +16,7 @@ services:
       - ./mysql/data:/var/lib/mysql-files/data
     networks:
       - rta
+    healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s, start_period: 60s}
   zookeeper:
     image: zookeeper:latest
     container_name: zookeeper
@@ -44,12 +45,54 @@ services:
       KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
     depends_on:
       [zookeeper]
+    healthcheck: {test: nc -z localhost 9092, interval: 1s, start_period: 120s}
+    networks:
+      - rta
+  debezium:
+    image: debezium/connect:1.8
+    hostname: debezium
+    container_name: debezium
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+    ports:
+      - 8083:8083
+    healthcheck: {test: curl -f localhost:8083, interval: 1s, start_period: 120s}
+    depends_on:
+      kafka: {condition: service_healthy}
+      mysql: {condition: service_healthy}
+    networks:
+      - rta
+  debezium_deploy:
+    image: debezium/connect:1.8
+    depends_on:
+      debezium: {condition: service_healthy}
+    environment:
+      KAFKA_ADDR: kafka:9092
+    volumes:
+      - ./debezium/register_mysql.sh:/register_mysql.sh
+    entrypoint: [bash, -c, /register_mysql.sh]
     networks:
       - rta
   orders-service:
     build: orders-service
     restart: unless-stopped
     container_name: orders-service
+    depends_on:
+      - mysql
+      - kafka
+    environment:
+      - MYSQL_SERVER=mysql
+      - KAFKA_BROKER_HOSTNAME=kafka
+      - KAFKA_BROKER_PORT=9092
+    networks:
+      - rta
+  delivery-service:
+    build: delivery-service
+    restart: unless-stopped
+    container_name: delivery-service
     depends_on:
       - mysql
       - kafka

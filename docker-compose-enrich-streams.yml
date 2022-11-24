@@ -10,10 +10,13 @@ services:
       - PRODUCTS_TOPIC=products
       - ENRICHED_ORDER_ITEMS_TOPIC=enriched-order-items
       - ENRICHED_ORDERS_TOPIC=enriched-orders
+      - PINOT_BROKER=pinot-broker:8099
     depends_on:
       - kafka
     networks:
       - rta
+    ports:
+      - "8080:8080"
 networks:
   rta:
     name: rta
