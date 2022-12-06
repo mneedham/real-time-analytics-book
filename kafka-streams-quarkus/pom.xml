@@ -6,6 +6,7 @@
   <artifactId>pizzashop</artifactId>
   <version>0.0.1</version>
   <properties>
+    <debezium.version>2.0.0.Final</debezium.version>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -14,7 +15,6 @@
     <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
     <quarkus.platform.version>2.13.0.Final</quarkus.platform.version>
     <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
-    <debezium.version>2.0.0.Final</debezium.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -40,20 +40,16 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-kafka-streams</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.apache.pinot</groupId>
       <artifactId>pinot-java-client</artifactId>
       <version>0.11.0</version>
     </dependency>
-
     <dependency>
       <groupId>org.jooq</groupId>
       <artifactId>jooq</artifactId>
       <version>3.17.4</version>
     </dependency>
-
-
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
@@ -79,7 +75,6 @@
       <artifactId>debezium-core</artifactId>
       <version>${debezium.version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>kafka</artifactId>

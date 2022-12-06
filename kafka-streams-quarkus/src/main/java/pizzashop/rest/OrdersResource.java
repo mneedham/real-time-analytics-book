@@ -8,6 +8,7 @@ import org.jooq.DatePart;
 import org.jooq.Field;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
+import pizzashop.models.OrderRow;
 import pizzashop.models.OrdersSummary;
 import pizzashop.models.SummaryRow;
 import pizzashop.models.TimePeriod;
@@ -111,6 +112,41 @@ public class OrdersResource {
                     summaryResults.getString(index, 0),
                     summaryResults.getLong(index, 1),
                     summaryResults.getDouble(index, 2)
+            ));
+        }
+
+        return Response.ok(rows).build();
+    }
+
+    @GET
+    @Path("/latestOrders")
+    public Response latestOrders() {
+        String query = DSL.using(SQLDialect.POSTGRES)
+                .select(
+                        field("ToDateTime(ts, 'HH:mm:ss:SSS')")
+                                .as("dateTime"),
+                        field("price"),
+                        field("userId"),
+                        field("productsOrdered"),
+                        field("totalQuantity")
+                )
+                .from("orders")
+                .orderBy(field("ts").desc())
+                .$limit(DSL.inline(10))
+                .getSQL();
+
+        ResultSet summaryResults = runQuery(connection, query);
+
+        int rowCount = summaryResults.getRowCount();
+
+        List<OrderRow> rows = new ArrayList<>();
+        for (int index = 0; index < rowCount; index++) {
+            rows.add(new OrderRow(
+                    summaryResults.getString(index, 0),
+                    summaryResults.getDouble(index, 1),
+                    summaryResults.getLong(index, 2),
+                    summaryResults.getLong(index, 3),
+                    summaryResults.getLong(index, 4)
             ));
         }
 

@@ -9,7 +9,6 @@ public class SummaryRow {
     private final double revenue;
 
     public SummaryRow(String timestamp, long orders, double revenue) {
-
         this.timestamp = timestamp;
         this.orders = orders;
         this.revenue = revenue;
