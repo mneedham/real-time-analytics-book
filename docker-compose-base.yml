@@ -16,7 +16,7 @@ services:
       - ./mysql/data:/var/lib/mysql-files/data
     networks:
       - rta
-    healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s, start_period: 60s}
+    healthcheck: {test: mysql -pdebezium -e 'select 1', interval: 1s, start_period: 120s}
   zookeeper:
     image: zookeeper:latest
     container_name: zookeeper

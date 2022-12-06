@@ -12,9 +12,5 @@ curl -s -X PUT -H  "Content-Type:application/json" http://debezium:8083/connecto
     "database.history.kafka.topic": "mysql-history",
     "database.include.list": "pizzashop",
     "time.precision.mode": "connect",
-    "include.schema.changes": false,
-    "transforms":"unwrap",
-    "transforms.unwrap.type":"io.debezium.transforms.ExtractNewRecordState",
-    "transforms.unwrap.drop.tombstones":false,
-    "transforms.unwrap.delete.handling.mode":"rewrite"
+    "include.schema.changes": false
  }'

@@ -1,25 +1,27 @@
 package pizzashop.streams;
 
+import io.debezium.serde.DebeziumSerdes;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.StateStore;
-import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import pizzashop.deser.JsonDeserializer;
 import pizzashop.deser.JsonSerializer;
 import pizzashop.deser.OrderItemWithContextSerde;
+import pizzashop.deser.ProductDeserializer;
 import pizzashop.models.*;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -29,30 +31,35 @@ public class Topology {
     public org.apache.kafka.streams.Topology buildTopology() {
         String orderStatusesTopic = System.getenv().getOrDefault("ORDER_STATUSES_TOPIC",  "ordersStatuses");
         String ordersTopic = System.getenv().getOrDefault("ORDERS_TOPIC",  "orders");
-        String productsTopic = System.getenv().getOrDefault("PRODUCTS_TOPIC",  "products");
+        String productsTopic = System.getenv().getOrDefault("PRODUCTS_TOPIC",  "mysql.pizzashop.products");
         String enrichedOrderItemsTopic = System.getenv().getOrDefault("ENRICHED_ORDER_ITEMS_TOPIC",  "enriched-order-items");
         String enrichedOrdersTopic = System.getenv().getOrDefault("ENRICHED_ORDERS_TOPIC",  "enriched-orders");
 
         final Serde<Order> orderSerde = Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(Order.class));
         OrderItemWithContextSerde orderItemWithContextSerde = new OrderItemWithContextSerde();
-        final Serde<Product> productSerde = Serdes.serdeFrom(new JsonSerializer<>(),
-                new JsonDeserializer<>(Product.class));
+
+        Serde<String> productKeySerde = DebeziumSerdes.payloadJson(String.class);
+        productKeySerde.configure(Collections.emptyMap(), true);
+
+        Serde<Product> productSerde = DebeziumSerdes.payloadJson(Product.class);
+        productSerde.configure(Collections.singletonMap("from.field", "after"), false);
+
         final Serde<HydratedOrderItem> hydratedOrderItemsSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(HydratedOrderItem.class));
         final Serde<EnrichedOrder> enrichedOrdersSerde = Serdes.serdeFrom(new JsonSerializer<>(),
                 new JsonDeserializer<>(EnrichedOrder.class));
         final Serde<OrderStatus> orderStatusSerde = Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(OrderStatus.class));
 
-
         StreamsBuilder builder = new StreamsBuilder();
 
-        KStream<String, Order> orders = builder.stream(ordersTopic, Consumed.with(Serdes.String(), orderSerde));
+        KStream<String, Order> orders = builder.stream(ordersTopic,
+                Consumed.with(Serdes.String(), orderSerde));
 
-        Materialized<String, Order, KeyValueStore<Bytes, byte[]>> ordersStore = Materialized.as("OrdersStore");
-        orders.toTable(ordersStore.withKeySerde(Serdes.String()).withValueSerde(orderSerde));
+        KTable<String, Product> products = builder.table(productsTopic,
+                Consumed.with(productKeySerde, productSerde));
 
-        KTable<String, Product> products = builder.table(productsTopic, Consumed.with(Serdes.String(), productSerde));
-        KStream<String, OrderStatus> orderStatuses = builder.stream(orderStatusesTopic, Consumed.with(Serdes.String(), orderStatusSerde));
+        KStream<String, OrderStatus> orderStatuses = builder.stream(orderStatusesTopic,
+                Consumed.with(Serdes.String(), orderStatusSerde));
 
         KStream<String, OrderItemWithContext> orderItems = orders.flatMap((key, value) -> {
             List<KeyValue<String, OrderItemWithContext>> result = new ArrayList<>();
@@ -68,10 +75,10 @@ public class Topology {
 
         orderItems.join(products, (orderItem, product) -> {
                     HydratedOrderItem hydratedOrderItem = new HydratedOrderItem();
-                    hydratedOrderItem.createdAt = orderItem.createdAt;
                     hydratedOrderItem.orderId = orderItem.orderId;
                     hydratedOrderItem.orderItem = orderItem.orderItem;
                     hydratedOrderItem.product = product;
+                    hydratedOrderItem.createdAt = orderItem.createdAt;
                     return hydratedOrderItem;
                 }, Joined.with(Serdes.String(), orderItemWithContextSerde, productSerde))
                 .to(enrichedOrderItemsTopic, Produced.with(Serdes.String(), hydratedOrderItemsSerde));
@@ -91,8 +98,6 @@ public class Topology {
         ).to(enrichedOrdersTopic, Produced.with(Serdes.String(), enrichedOrdersSerde));
 
         Duration windowSize = Duration.ofSeconds(60);
-//        TimeWindows timeWindow = TimeWindows.ofSizeWithNoGrace(windowSize);
-
         Duration advanceSize = Duration.ofSeconds(1);
         Duration gracePeriod = Duration.ofSeconds(60);
         TimeWindows timeWindow = TimeWindows.ofSizeAndGrace(windowSize, gracePeriod).advanceBy(advanceSize);

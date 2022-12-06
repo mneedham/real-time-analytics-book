@@ -1,6 +1,9 @@
 package pizzashop.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 // POJO classes
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Product {
     public Product() {
 
