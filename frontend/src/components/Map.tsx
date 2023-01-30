@@ -41,7 +41,7 @@ const Map = ({
       }, [orderId, refreshValue])
 
     const getDeliveryStatus = async (fn: (ds: DeliveryStatus) => void) => {
-    const res = await axios(`http://localhost:5000/orders/${orderId}`)
+    const res = await axios(`http://localhost:8082/orders/${orderId}`)
     fn(res.data.deliveryStatus)
     }
 

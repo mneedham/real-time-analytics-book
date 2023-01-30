@@ -52,7 +52,7 @@ export default function Home() {
 
 
   const getOrder = async (fn: (orders: Order) => void) => {
-    const res = await axios(`http://localhost:5000/orders/${orderId}`)
+    const res = await axios(`http://localhost:8082/orders/${orderId}`)
     fn(res.data)
   }
 

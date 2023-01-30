@@ -31,7 +31,7 @@ export default function Home() {
   }, [userId])
 
   const getOrders = async (fn: (orders:Array<OrderSummary>) => void) => {
-    const res = await axios(`http://localhost:5000/users/${userId}/orders`)
+    const res = await axios(`http://localhost:8082/users/${userId}/orders`)
     fn(res.data)
   }
 

@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 from dateutil import parser
+import requests
 
 def path_to_image_html(path):
     return '<img src="' + path + '" width="60" >'
@@ -19,6 +20,8 @@ def convert_df(input_df):
 pinot_host=os.environ.get("PINOT_SERVER", "pinot-broker")
 pinot_port=os.environ.get("PINOT_PORT", 8099)
 conn = connect(pinot_host, pinot_port)
+
+delivery_service_api = "http://kafka-streams-quarkus:8080"
 
 st.set_page_config(layout="wide")
 st.title("All About That Dough Dashboard 🍕")
@@ -200,24 +203,15 @@ if pinot_available:
     # Inject CSS with Markdown
     st.markdown(hide_table_row_index, unsafe_allow_html=True)
 
+    response = requests.get(f"{delivery_service_api}/orders/popular").json()
+
     left, right = st.columns(2)
 
     with left:
         st.subheader("Most popular items")
 
-        curs.execute("""
-        SELECT "product.name" AS product, 
-               "product.image" AS image,
-                distinctcount(orderId) AS orders,
-                sum("orderItem.quantity") AS quantity
-        FROM order_items_enriched
-        where ts > ago(%(timeAgo)s)
-        group by product, image
-        ORDER BY count(*) DESC
-        LIMIT 5
-        """, {"timeAgo": mapping2[time_ago]["period"]})
-
-        df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
+        popular_items = response["items"]
+        df = pd.DataFrame(popular_items)
         df["quantityPerOrder"] = df["quantity"] / df["orders"]
 
         html = convert_df(df)
@@ -226,31 +220,42 @@ if pinot_available:
     with right:
         st.subheader("Most popular categories")
 
-        curs.execute("""
-        SELECT "product.category" AS category, 
-                distinctcount(orderId) AS orders,
-                sum("orderItem.quantity") AS quantity
-        FROM order_items_enriched
-        where ts > ago(%(timeAgo)s)
-        group by category
-        ORDER BY count(*) DESC
-        LIMIT 5
-        """, {"timeAgo": mapping2[time_ago]["period"]})
-
-        df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
+        popular_categories = response["categories"]
+        df = pd.DataFrame(popular_categories)
         df["quantityPerOrder"] = df["quantity"] / df["orders"]
 
         html = convert_df(df)
         st.markdown(html, unsafe_allow_html=True)
 
-    curs.execute("""
-    SELECT ToDateTime(ts, 'HH:mm:ss:SSS') AS dateTime, status, price, userId, productsOrdered, totalQuantity
-    FROM orders
-    ORDER BY ts DESC
-    LIMIT 10
-    """)
+    
+    left, right = st.columns(2)
 
-    df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
+    with left:
+        st.subheader("Order Statuses Overview")
+
+        popular_items = requests.get(f"{delivery_service_api}/orders/statuses").json()
+        df = pd.DataFrame(popular_items)[[
+            "status", "min", "avg", "percentile50", "percentile75", 
+            "percentile90", "percentile99", "max"
+        ]]
+
+        html = convert_df(df)
+        st.markdown(html, unsafe_allow_html=True)
+
+    with right:
+        st.subheader("Orders delayed while cooking")
+
+        popular_items = requests.get(f"{delivery_service_api}/orders/stuck/BEING_COOKED/60000").json()
+        df = pd.DataFrame(popular_items)[[
+            "id", "price", "ts", "timeInStatus"
+        ]].head(5)
+
+        html = convert_df(df)
+        st.markdown(html, unsafe_allow_html=True)
+
+
+    response = requests.get(f"{delivery_service_api}/orders/latestOrders").json()
+    df = pd.DataFrame(response)
     
     st.subheader("Latest Orders")
 
