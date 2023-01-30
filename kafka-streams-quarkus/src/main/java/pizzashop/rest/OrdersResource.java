@@ -16,10 +16,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -364,11 +361,35 @@ public class OrdersResource {
                         "status", statusesResultSet.getString(index, 1)
                 ));
 
-        return Response.ok(Map.of(
+        String deliveryStatusQuery = DSL.using(SQLDialect.POSTGRES)
+                .select(
+                        field("ToDateTime(ts, 'YYYY-MM-dd HH:mm:ss')").as("ts"),
+                        field("deliveryLat"),
+                        field("deliveryLon")
+                )
+                .from("deliveryStatuses")
+                .where(field("id").eq(field("'" + orderId + "'")))
+                .limit(1)
+                .getSQL();
+        ResultSet deliveryStatusResultSet = runQuery(connection, deliveryStatusQuery);
+        Stream<Map<String, Object>> deliveryStatus = IntStream.range(0,
+                        deliveryStatusResultSet.getRowCount())
+                .mapToObj(index -> Map.of(
+                        "timestamp  ", deliveryStatusResultSet.getString(index, 0),
+                        "deliveryLat", deliveryStatusResultSet.getDouble(index, 1),
+                        "deliveryLon", deliveryStatusResultSet.getDouble(index, 2)
+                ));
+
+        Map<String, Object> response = new HashMap<>(Map.of(
                 "userId", userIds.findFirst().orElse(""),
                 "products", products,
                 "statuses", statuses
-        )).build();
+        ));
+
+        deliveryStatus.findFirst().ifPresent(stringObjectMap ->
+                response.put("deliveryStatus", stringObjectMap));
+
+        return Response.ok(response).build();
     }
 
     private static ResultSet runQuery(Connection connection, String query) {
