@@ -66,7 +66,8 @@ def generate_delivery_statuses(order, last_status_time, shop_location, delivery_
                     "id": order["id"],
                     "updatedAt": next_status_time.isoformat(),
                     "deliveryLat": str(point[0]),
-                    "deliveryLon": str(point[1])
+                    "deliveryLon": str(point[1]),
+                    "status": "IN_TRANSIT"
                 })
                 last_status_time = next_status_time
         except pyproj.exceptions.GeodError as e:
@@ -76,7 +77,8 @@ def generate_delivery_statuses(order, last_status_time, shop_location, delivery_
         "id": order["id"],
         "updatedAt": (last_status_time + datetime.timedelta(seconds=1)).isoformat(),
         "deliveryLat": str(delivery_location[0]),
-        "deliveryLon": str(delivery_location[1])
+        "deliveryLon": str(delivery_location[1]),
+        "status": "DELIVERED"
     })
     return statuses
 
