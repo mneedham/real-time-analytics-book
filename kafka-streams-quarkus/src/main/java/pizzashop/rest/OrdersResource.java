@@ -317,12 +317,19 @@ public class OrdersResource {
     public Response order(@PathParam("orderId") String orderId) {
         String userQuery = DSL.using(SQLDialect.POSTGRES)
                 .select(field("userId"))
-                .from("orders_enriched")
+                .select(field("deliveryLat"))
+                .select(field("deliveryLon"))
+                .from("orders")
                 .where(field("id").eq(field("'" + orderId + "'")))
                 .getSQL();
         ResultSet userResultSet = runQuery(connection, userQuery);
-        Stream<String> userIds = IntStream.range(0, userResultSet.getRowCount())
-                .mapToObj(index -> userResultSet.getString(index, 0));
+        Stream<Map<String, Object>> userInfo = IntStream.range(0,
+                        userResultSet.getRowCount())
+                .mapToObj(index -> Map.of(
+                        "id  ", userResultSet.getString(index, 0),
+                        "deliveryLat", userResultSet.getDouble(index, 1),
+                        "deliveryLon", userResultSet.getDouble(index, 2)
+                ));
 
         String productsQuery = DSL.using(SQLDialect.POSTGRES)
                 .select(
@@ -369,19 +376,18 @@ public class OrdersResource {
                 )
                 .from("deliveryStatuses")
                 .where(field("id").eq(field("'" + orderId + "'")))
-                .limit(1)
                 .getSQL();
         ResultSet deliveryStatusResultSet = runQuery(connection, deliveryStatusQuery);
         Stream<Map<String, Object>> deliveryStatus = IntStream.range(0,
                         deliveryStatusResultSet.getRowCount())
                 .mapToObj(index -> Map.of(
                         "timestamp  ", deliveryStatusResultSet.getString(index, 0),
-                        "deliveryLat", deliveryStatusResultSet.getDouble(index, 1),
-                        "deliveryLon", deliveryStatusResultSet.getDouble(index, 2)
+                        "lat", deliveryStatusResultSet.getDouble(index, 1),
+                        "lon", deliveryStatusResultSet.getDouble(index, 2)
                 ));
 
         Map<String, Object> response = new HashMap<>(Map.of(
-                "userId", userIds.findFirst().orElse(""),
+                "user", userInfo,
                 "products", products,
                 "statuses", statuses
         ));
