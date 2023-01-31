@@ -13,6 +13,10 @@
         {
             "name": "deliveryLon",
             "dataType": "DOUBLE"
+        },
+        {
+            "name": "location",
+            "dataType": "BYTES"
         }
     ],
     "dateTimeFieldSpecs": [

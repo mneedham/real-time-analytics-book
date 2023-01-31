@@ -36,6 +36,10 @@
             {
                 "columnName": "ts",
                 "transformFunction": "FromDateTime(\"updatedAt\", 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS')"
+            },
+            {
+                "columnName": "location",
+                "transformFunction": "toSphericalGeography(stPoint(deliveryLon,deliveryLat))"
             }
         ]
     },

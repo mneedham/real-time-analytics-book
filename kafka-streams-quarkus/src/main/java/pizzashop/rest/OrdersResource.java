@@ -326,7 +326,7 @@ public class OrdersResource {
         Stream<Map<String, Object>> userInfo = IntStream.range(0,
                         userResultSet.getRowCount())
                 .mapToObj(index -> Map.of(
-                        "id  ", userResultSet.getString(index, 0),
+                        "id", userResultSet.getString(index, 0),
                         "deliveryLat", userResultSet.getDouble(index, 1),
                         "deliveryLon", userResultSet.getDouble(index, 2)
                 ));
@@ -381,7 +381,7 @@ public class OrdersResource {
         Stream<Map<String, Object>> deliveryStatus = IntStream.range(0,
                         deliveryStatusResultSet.getRowCount())
                 .mapToObj(index -> Map.of(
-                        "timestamp  ", deliveryStatusResultSet.getString(index, 0),
+                        "timestamp", deliveryStatusResultSet.getString(index, 0),
                         "lat", deliveryStatusResultSet.getDouble(index, 1),
                         "lon", deliveryStatusResultSet.getDouble(index, 2)
                 ));
